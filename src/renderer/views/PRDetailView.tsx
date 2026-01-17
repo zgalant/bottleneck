@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import { useParams } from "react-router-dom";
 // Lazy load DiffEditor to avoid loading Monaco on app startup
 const DiffEditor = lazy(() => import("../components/DiffEditor").then(module => ({ default: module.DiffEditor })));
@@ -61,24 +61,6 @@ export default function PRDetailView() {
 
   const tabs = ["conversation", "files", "comments"] as const;
   
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey && e.shiftKey && (e.key === "]" || e.key === "[")) {
-        e.preventDefault();
-        const currentIndex = tabs.indexOf(activeTab);
-        if (e.key === "]") {
-          const nextIndex = (currentIndex + 1) % tabs.length;
-          setActiveTab(tabs[nextIndex]);
-        } else {
-          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-          setActiveTab(tabs[prevIndex]);
-        }
-      }
-    };
-    
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTab]);
   const [pr, setPR] = useState<PullRequest | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -232,6 +214,89 @@ export default function PRDetailView() {
       });
     }
   }, [token, owner, repo, pr]);
+
+  // Compute files in visual tree order (folders first, then alphabetically, depth-first)
+  const sortedFiles = useMemo(() => {
+    if (!files || files.length === 0) return [];
+    
+    // Build tree structure
+    type TreeNode = { name: string; file?: File; children: Map<string, TreeNode> };
+    const root: TreeNode = { name: "", children: new Map() };
+    
+    for (const file of files) {
+      const parts = file.filename.split("/");
+      let current = root;
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (!current.children.has(part)) {
+          current.children.set(part, { 
+            name: part, 
+            file: i === parts.length - 1 ? file : undefined,
+            children: new Map() 
+          });
+        }
+        current = current.children.get(part)!;
+        if (i === parts.length - 1) {
+          current.file = file;
+        }
+      }
+    }
+    
+    // Traverse tree depth-first, folders first then alphabetically
+    const result: File[] = [];
+    const traverse = (node: TreeNode) => {
+      const children = Array.from(node.children.values());
+      // Sort: folders first, then alphabetically
+      children.sort((a, b) => {
+        const aIsFolder = a.children.size > 0;
+        const bIsFolder = b.children.size > 0;
+        if (aIsFolder && !bIsFolder) return -1;
+        if (!aIsFolder && bIsFolder) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      for (const child of children) {
+        if (child.file) result.push(child.file);
+        traverse(child);
+      }
+    };
+    traverse(root);
+    return result;
+  }, [files]);
+
+  // Keyboard shortcuts for tab switching and file navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+[ or ] to switch tabs
+      if (e.metaKey && e.shiftKey && (e.key === "]" || e.key === "[")) {
+        e.preventDefault();
+        const currentIndex = tabs.indexOf(activeTab);
+        if (e.key === "]") {
+          const nextIndex = (currentIndex + 1) % tabs.length;
+          setActiveTab(tabs[nextIndex]);
+        } else {
+          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+          setActiveTab(tabs[prevIndex]);
+        }
+        return;
+      }
+      
+      // Cmd+[ or ] to navigate between files (only in files tab)
+      if (e.metaKey && !e.shiftKey && (e.key === "]" || e.key === "[") && activeTab === "files" && sortedFiles.length > 0) {
+        e.preventDefault();
+        const currentIndex = selectedFile ? sortedFiles.findIndex(f => f.filename === selectedFile.filename) : -1;
+        if (e.key === "]") {
+          const nextIndex = currentIndex < sortedFiles.length - 1 ? currentIndex + 1 : 0;
+          handleFileSelect(sortedFiles[nextIndex]);
+        } else {
+          const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedFiles.length - 1;
+          handleFileSelect(sortedFiles[prevIndex]);
+        }
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, sortedFiles, selectedFile, handleFileSelect]);
 
   useEffect(() => {
     if (files.length === 0) {

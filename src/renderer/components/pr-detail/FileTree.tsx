@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
-  UncontrolledTreeEnvironment,
+  ControlledTreeEnvironment,
   Tree,
   StaticTreeDataProvider,
   TreeItem,
@@ -34,6 +34,7 @@ interface FileTreeProps {
 
 export function FileTree({
   files,
+  selectedFile,
   viewedFiles,
   onFileSelect,
   theme,
@@ -101,22 +102,55 @@ export function FileTree({
     return new StaticTreeDataProvider<TreeData>(treeItems);
   }, [treeItems]);
 
+  // Compute expanded items once
+  const expandedItems = useMemo(() => {
+    return Array.from(
+      (Object.values(treeItems) as TreeItem<TreeData>[])
+        .filter(
+          (item: TreeItem<TreeData>) =>
+            item.isFolder && (item.children?.length ?? 0) > 0,
+        )
+        .map((item: TreeItem<TreeData>) => item.index),
+    );
+  }, [treeItems]);
+
+  // Controlled state for tree
+  const [focusedItem, setFocusedItem] = useState<TreeItemIndex | undefined>(selectedFile?.filename);
+  const [expandedItemsState, setExpandedItemsState] = useState<TreeItemIndex[]>(expandedItems);
+  const [selectedItems, setSelectedItems] = useState<TreeItemIndex[]>(selectedFile ? [selectedFile.filename] : []);
+
+  // Sync selection when selectedFile prop changes (e.g., from keyboard navigation)
+  useEffect(() => {
+    if (selectedFile) {
+      setSelectedItems([selectedFile.filename]);
+      setFocusedItem(selectedFile.filename);
+    } else {
+      setSelectedItems([]);
+      setFocusedItem(undefined);
+    }
+  }, [selectedFile]);
+
+  // Sync expanded items when tree structure changes
+  useEffect(() => {
+    setExpandedItemsState(expandedItems);
+  }, [expandedItems]);
+
   return (
-    <UncontrolledTreeEnvironment
+    <ControlledTreeEnvironment
+      items={treeItems}
       dataProvider={treeDataProvider}
       getItemTitle={(item) => item.index.toString().split("/").pop() || ""}
       viewState={{
         "pr-files": {
-          expandedItems: Array.from(
-            (Object.values(treeItems) as TreeItem<TreeData>[])
-              .filter(
-                (item: TreeItem<TreeData>) =>
-                  item.isFolder && (item.children?.length ?? 0) > 0,
-              )
-              .map((item: TreeItem<TreeData>) => item.index),
-          ),
+          expandedItems: expandedItemsState,
+          selectedItems,
+          focusedItem,
         },
       }}
+      onExpandItem={(item) => setExpandedItemsState((prev) => [...prev, item.index])}
+      onCollapseItem={(item) => setExpandedItemsState((prev) => prev.filter((i) => i !== item.index))}
+      onSelectItems={(items) => setSelectedItems(items)}
+      onFocusItem={(item) => setFocusedItem(item.index)}
       onPrimaryAction={(item: TreeItem<TreeData>) => {
         if (item && !item.isFolder && item.data.file) {
           onFileSelect(item.data.file);
@@ -221,6 +255,6 @@ export function FileTree({
       )}
     >
       <Tree treeId="pr-files" rootItem="root" />
-    </UncontrolledTreeEnvironment>
+    </ControlledTreeEnvironment>
   );
 }
