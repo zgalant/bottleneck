@@ -518,7 +518,7 @@ export function PRTreeView({
                               "truncate text-sm",
                               theme === "dark" ? "text-gray-500" : "text-gray-400"
                             )}>
-                              {item.data.pr.body.replace(/^###\s*Description\s*/i, '').replace(/\r?\n/g, ' ').trim()}
+                              {item.data.pr.body.replace(/^###\s*Description\s*/i, '').replace(/^:\s*/, '').replace(/\r?\n/g, ' ').trim()}
                             </span>
                           </>
                         )}
