@@ -505,9 +505,23 @@ export function PRTreeView({
 
                     {/* Right side: Two-row column layout */}
                     <div className="flex-1 flex flex-col justify-center min-w-0">
-                      {/* First row: PR number and title */}
-                      <div className="flex items-center">
-                        <span className="truncate text-sm">{title}</span>
+                      {/* First row: PR number and title with description preview */}
+                      <div className="flex items-center min-w-0">
+                        <span className="truncate text-sm flex-shrink-0 max-w-[50%]">{title}</span>
+                        {item.data.pr?.body && (
+                          <>
+                            <span className={cn(
+                              "mx-2 flex-shrink-0",
+                              theme === "dark" ? "text-gray-600" : "text-gray-400"
+                            )}>—</span>
+                            <span className={cn(
+                              "truncate text-sm",
+                              theme === "dark" ? "text-gray-500" : "text-gray-400"
+                            )}>
+                              {item.data.pr.body.replace(/\r?\n/g, ' ').trim()}
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       {/* Second row: Metadata */}
