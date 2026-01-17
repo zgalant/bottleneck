@@ -102,14 +102,14 @@ export function ActivityItem({ activity }: ActivityItemProps) {
     <div
       onClick={handleClick}
       className={cn(
-        "px-4 py-3 transition-colors",
+        "px-3 py-2.5 transition-colors",
         canNavigateToPR(activity)
           ? "cursor-pointer hover:bg-gray-300/10"
           : "cursor-default hover:bg-gray-300/10",
         theme === "dark" ? "hover:bg-gray-700/50" : ""
       )}
     >
-      <div className="flex gap-3">
+      <div className="flex gap-2.5">
         {/* Icon */}
         <div className="flex-shrink-0 mt-0.5">
           {getActivityIcon()}
@@ -117,8 +117,8 @@ export function ActivityItem({ activity }: ActivityItemProps) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span className={cn("text-xs font-semibold", getActivityColor())}>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className={cn("text-xs font-semibold whitespace-nowrap", getActivityColor())}>
               {getActivityLabel()}
             </span>
             <span className={cn(
@@ -131,7 +131,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
 
           {/* PR info */}
           {activity.prNumber && (
-            <div className="mt-1 text-sm truncate">
+            <div className="mt-1.5 text-sm">
               <span className={cn(
                 "font-medium",
                 theme === "dark" ? "text-gray-200" : "text-gray-900"
@@ -140,7 +140,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
               </span>
               {' '}
               <span className={cn(
-                "text-xs truncate inline-block max-w-[200px]",
+                "break-words",
                 theme === "dark" ? "text-gray-400" : "text-gray-600"
               )}>
                 {activity.prTitle}
@@ -150,13 +150,13 @@ export function ActivityItem({ activity }: ActivityItemProps) {
 
           {/* User info */}
           {(activity.author || activity.reviewer || activity.commentAuthor) && (
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
               {(activity.author || activity.reviewer || activity.commentAuthor) && (
                 <>
                   <img
                     src={(activity.author || activity.reviewer || activity.commentAuthor)?.avatar_url}
                     alt="user"
-                    className="w-5 h-5 rounded-full"
+                    className="w-4 h-4 rounded-full flex-shrink-0"
                   />
                   <span className={cn(
                     "text-xs font-medium",

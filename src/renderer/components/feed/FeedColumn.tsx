@@ -1,8 +1,9 @@
 import { useActivityStore } from "../../stores/activityStore";
+import { usePRStore } from "../../stores/prStore";
 import { useUIStore } from "../../stores/uiStore";
 import { cn } from "../../utils/cn";
-import { X } from "lucide-react";
-import { useMemo } from "react";
+import { X, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ActivityItem } from "./ActivityItem";
 
 interface FeedColumnProps {
@@ -13,6 +14,18 @@ interface FeedColumnProps {
 export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
   const { theme } = useUIStore();
   const { activities: allActivities } = useActivityStore();
+  const { fetchPullRequests } = usePRStore();
+  const [isReloading, setIsReloading] = useState(false);
+
+  const handleReload = async () => {
+    const [owner, name] = repoKey.split('/');
+    setIsReloading(true);
+    try {
+      await fetchPullRequests(owner, name, true);
+    } finally {
+      setIsReloading(false);
+    }
+  };
 
   const activities = useMemo(() => {
     const [owner, name] = repoKey.split('/');
@@ -44,15 +57,31 @@ export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
           </span>
           {name}
         </h3>
-        <button
-          onClick={onRemove}
-          className={cn(
-            "p-1 rounded hover:bg-gray-300/20",
-            theme === "dark" ? "text-gray-400" : "text-gray-600"
-          )}
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleReload}
+            disabled={isReloading}
+            className={cn(
+              "p-1.5 rounded transition-colors",
+              isReloading && "opacity-50 cursor-wait",
+              theme === "dark"
+                ? "text-gray-400 hover:bg-gray-700 hover:text-gray-300 disabled:text-gray-500"
+                : "text-gray-600 hover:bg-gray-200 hover:text-gray-700 disabled:text-gray-400"
+            )}
+            title="Reload repository data from GitHub"
+          >
+            <RefreshCw size={16} className={isReloading ? "animate-spin" : ""} />
+          </button>
+          <button
+            onClick={onRemove}
+            className={cn(
+              "p-1.5 rounded hover:bg-gray-300/20 transition-colors",
+              theme === "dark" ? "text-gray-400" : "text-gray-600"
+            )}
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Activities list */}
