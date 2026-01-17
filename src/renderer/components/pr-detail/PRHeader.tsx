@@ -17,6 +17,7 @@ import { PullRequest } from "../../services/github";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "../../utils/cn";
 import { getPRIcon, getPRColorClass } from "../../utils/prStatus";
+import { getLabelColors } from "../../utils/labelColors";
 import { CheckoutDropdown } from "./CheckoutDropdown";
 
 interface PRHeaderProps {
@@ -286,6 +287,38 @@ export function PRHeader({
           <span className="text-red-400">-{fileStats.deletions}</span>
           <span>{fileStats.changed} files</span>
         </div>
+
+        {/* Labels */}
+        {pr.labels && pr.labels.length > 0 && (
+          <div className="flex items-center gap-1">
+            {pr.labels.slice(0, 3).map((label) => {
+              const labelColors = getLabelColors(label.color, theme);
+              return (
+                <span
+                  key={label.name}
+                  className="px-1 rounded text-[10px] font-medium opacity-80 leading-tight"
+                  style={{
+                    backgroundColor: labelColors.backgroundColor,
+                    color: labelColors.color,
+                  }}
+                  title={label.name}
+                >
+                  {label.name.length > 12 ? `${label.name.slice(0, 12)}…` : label.name}
+                </span>
+              );
+            })}
+            {pr.labels.length > 3 && (
+              <span
+                className={cn(
+                  "text-[10px]",
+                  theme === "dark" ? "text-gray-500" : "text-gray-400"
+                )}
+              >
+                +{pr.labels.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Approval Status Badge */}
         {pr.state === "open" && !pr.merged && (
