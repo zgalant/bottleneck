@@ -17,6 +17,22 @@ interface Command {
   preview?: React.ReactNode;
 }
 
+function formatRelativeTime(date: string): string {
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 const commands: Command[] = [
   {
     id: "toggle-sidebar",
@@ -416,7 +432,19 @@ export default function CommandPalette() {
                           </span>
                         </>
                       )}
-                      <span className="truncate">{cmd.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate block">{cmd.name}</span>
+                        {isPR && pr && (
+                          <span className={cn(
+                            "text-xs truncate block",
+                            globalIdx === selectedIndex
+                              ? "text-gray-600 dark:text-gray-400"
+                              : "text-gray-500 dark:text-gray-500"
+                          )}>
+                            {formatRelativeTime(pr.updated_at)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {cmd.shortcut && <span className="opacity-60 ml-2 flex-shrink-0">{cmd.shortcut}</span>}
                   </li>
