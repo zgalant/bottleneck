@@ -1,6 +1,7 @@
 import { BrowserWindow, shell, dialog } from "electron";
 import Store from "electron-store";
 import { Octokit } from "@octokit/rest";
+import { execSync } from "child_process";
 
 interface AuthToken {
   token: string;
@@ -32,8 +33,54 @@ export class GitHubAuth {
       }
     }
 
-    // Use Personal Access Token approach
+    // Try gh CLI auth first
+    try {
+      const ghToken = await this.getGhCliToken();
+      if (ghToken) {
+        return ghToken;
+      }
+    } catch (error) {
+      console.log("gh CLI not available or not authenticated:", error);
+    }
+
+    // Fall back to Personal Access Token approach
     return await this.personalAccessTokenAuth();
+  }
+
+  private async getGhCliToken(): Promise<string | null> {
+    try {
+      const token = execSync("gh auth token", { 
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
+
+      if (!token) {
+        return null;
+      }
+
+      // Validate the token
+      try {
+        const octokit = new Octokit({ auth: token });
+        const { data: user } = await octokit.users.getAuthenticated();
+        
+        // Store the token
+        const authToken: AuthToken = {
+          token,
+          type: "pat",
+        };
+        this.store.set("github_auth", authToken);
+        
+        console.log(`✅ Authenticated via gh CLI as ${user.login}`);
+        
+        return token;
+      } catch (validationError) {
+        console.log("gh token validation failed:", validationError);
+        return null;
+      }
+    } catch (error) {
+      // gh CLI not installed or not authenticated
+      return null;
+    }
   }
 
   private async personalAccessTokenAuth(): Promise<string> {
@@ -42,9 +89,9 @@ export class GitHubAuth {
       buttons: ["Enter Token", "Create Token", "Cancel"],
       defaultId: 0,
       title: "GitHub Authentication",
-      message: "GitHub Personal Access Token Required",
+      message: "GitHub Authentication Required",
       detail:
-        'To use Bottleneck, you need a GitHub Personal Access Token with the following scopes:\n\n• repo (Full control of private repositories)\n• read:org (Read organization data)\n• read:user (Read user profile data)\n\nClick "Create Token" to open GitHub and create one, or "Enter Token" if you already have one.',
+        'To use Bottleneck, you need to authenticate with GitHub.\n\nYou can:\n• Click "Create Token" to create a Personal Access Token on GitHub\n• Click "Enter Token" to paste an existing token\n\nAlternatively, authenticate with: gh auth login',
     });
 
     if (result.response === 2) {
