@@ -22,6 +22,7 @@ const AuthView = lazy(() => import("./views/AuthView"));
 const IssueTrackerView = lazy(() => import("./views/IssueTrackerView"));
 const IssueDetailView = lazy(() => import("./views/IssueDetailView"));
 const StatsView = lazy(() => import("./views/StatsView"));
+const FeedView = lazy(() => import("./views/FeedView"));
 const CursorView = lazy(() => import("./views/CursorView"));
 const DevinView = lazy(() => import("./views/DevinView"));
 const ChatGPTView = lazy(() => import("./views/ChatGPTView"));
@@ -204,6 +205,7 @@ function App() {
                 element={<IssueDetailView />}
               />
               <Route path="/stats" element={<StatsView />} />
+              <Route path="/feed" element={<FeedView />} />
               <Route path="/settings" element={<SettingsView />} />
               <Route path="/agents/cursor" element={<CursorView />} />
               <Route path="/agents/devin" element={<DevinView />} />

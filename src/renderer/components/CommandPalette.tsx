@@ -152,6 +152,16 @@ const commands: Command[] = [
     preview: <div>View PR statistics and analytics</div>,
   },
   {
+    id: "nav-feed",
+    name: "Go to Activity Feed",
+    keywords: "navigate feed activity stream updates",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/feed");
+    },
+    preview: <div>View real-time activity from all repositories</div>,
+  },
+  {
     id: "show-shortcuts",
     name: "Show Keyboard Shortcuts",
     keywords: "help shortcuts",
