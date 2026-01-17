@@ -164,6 +164,15 @@ export default function CommandPalette() {
         },
         preview: <div>Open this pull request on GitHub</div>,
       });
+      cmds.push({
+        id: "open-pr-graphite",
+        name: "Open PR on Graphite",
+        keywords: "graphite open browser external link stacking",
+        action: () => {
+          window.open(`https://app.graphite.dev/github/pr/${owner}/${repo}/${prNumber}`, '_blank');
+        },
+        preview: <div>Open this pull request on Graphite</div>,
+      });
     }
     
     return cmds;
