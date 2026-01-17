@@ -3,7 +3,7 @@ import { Command as CommandIcon, Search, X } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface Command {
   id: string;
@@ -126,6 +126,7 @@ const commands: Command[] = [
 export default function CommandPalette() {
   const { commandPaletteOpen, toggleCommandPalette } = useUIStore();
   const navigate = useNavigate();
+  const location = useLocation();
   // Expose navigate so that commands array can use it without hooks
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -139,13 +140,37 @@ export default function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isPreviewKey, setIsPreviewKey] = useState(false);
 
+  const contextualCommands = useMemo(() => {
+    const cmds: Command[] = [];
+    
+    const prMatch = location.pathname.match(/^\/pulls\/[^/]+\/[^/]+\/(\d+)$/);
+    if (prMatch) {
+      const prNumber = prMatch[1];
+      cmds.push({
+        id: "copy-gh-checkout",
+        name: "Copy gh pr checkout command",
+        keywords: "git checkout gh pr copy clipboard",
+        action: () => {
+          navigator.clipboard.writeText(`gh pr checkout ${prNumber}`);
+        },
+        preview: <div>Copy "gh pr checkout {prNumber}" to clipboard</div>,
+      });
+    }
+    
+    return cmds;
+  }, [location.pathname]);
+
+  const allCommands = useMemo(() => {
+    return [...contextualCommands, ...commands];
+  }, [contextualCommands]);
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return commands;
+    if (!query.trim()) return allCommands;
     const q = query.toLowerCase();
-    return commands.filter(
+    return allCommands.filter(
       (c) => c.name.toLowerCase().includes(q) || c.keywords.includes(q),
     );
-  }, [query]);
+  }, [query, allCommands]);
 
   useEffect(() => {
     setSelectedIndex(0);
