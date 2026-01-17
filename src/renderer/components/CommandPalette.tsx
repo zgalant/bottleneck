@@ -142,6 +142,16 @@ const commands: Command[] = [
     preview: <div>Open issues list</div>,
   },
   {
+    id: "nav-stats",
+    name: "Go to Statistics",
+    keywords: "navigate stats analytics metrics dashboard",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/stats");
+    },
+    preview: <div>View PR statistics and analytics</div>,
+  },
+  {
     id: "show-shortcuts",
     name: "Show Keyboard Shortcuts",
     keywords: "help shortcuts",
