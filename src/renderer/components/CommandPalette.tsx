@@ -143,9 +143,9 @@ export default function CommandPalette() {
   const contextualCommands = useMemo(() => {
     const cmds: Command[] = [];
     
-    const prMatch = location.pathname.match(/^\/pulls\/[^/]+\/[^/]+\/(\d+)$/);
+    const prMatch = location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
     if (prMatch) {
-      const prNumber = prMatch[1];
+      const [, owner, repo, prNumber] = prMatch;
       cmds.push({
         id: "copy-gh-checkout",
         name: "Copy gh pr checkout command",
@@ -154,6 +154,15 @@ export default function CommandPalette() {
           navigator.clipboard.writeText(`gh pr checkout ${prNumber}`);
         },
         preview: <div>Copy "gh pr checkout {prNumber}" to clipboard</div>,
+      });
+      cmds.push({
+        id: "open-pr-github",
+        name: "Open PR on GitHub",
+        keywords: "github open browser external link",
+        action: () => {
+          window.open(`https://github.com/${owner}/${repo}/pull/${prNumber}`, '_blank');
+        },
+        preview: <div>Open this pull request on GitHub</div>,
       });
     }
     
