@@ -561,16 +561,21 @@ export function PRTreeView({
                           {item.data.pr.state === "open" && !item.data.pr.merged && (
                             <div className="flex items-center">
                               {item.data.pr.approvalStatus === "approved" ? (
-                                <div title="Approved">
-                                  <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                <div className="flex items-center px-1.5 py-0.5 bg-green-500/20 text-green-500 rounded" title="Approved">
+                                  <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                                  <span className="text-[10px] leading-tight">
+                                    Approved{item.data.pr.approvedBy && item.data.pr.approvedBy.length > 0 && ` (${item.data.pr.approvedBy.length})`}
+                                  </span>
                                 </div>
                               ) : item.data.pr.approvalStatus === "changes_requested" ? (
-                                <div title="Changes requested">
-                                  <XCircle className="w-3 h-3 text-red-500" />
+                                <div className="flex items-center px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded" title="Changes requested">
+                                  <XCircle className="w-3 h-3 mr-0.5" />
+                                  <span className="text-[10px] leading-tight">Changes requested</span>
                                 </div>
                               ) : item.data.pr.approvalStatus === "pending" ? (
-                                <div title="Review pending">
-                                  <Clock className="w-3 h-3 text-yellow-500" />
+                                <div className="flex items-center px-1.5 py-0.5 bg-yellow-500/20 text-yellow-500 rounded" title="Review pending">
+                                  <Clock className="w-3 h-3 mr-0.5" />
+                                  <span className="text-[10px] leading-tight">Pending</span>
                                 </div>
                               ) : (
                                 <div title="No review">
