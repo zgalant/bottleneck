@@ -1,6 +1,7 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import { visit } from "unist-util-visit";
 import { Components } from "react-markdown";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
@@ -9,6 +10,60 @@ import { CodeBlock } from "./CodeBlock";
 interface MarkdownProps {
   content: string;
   variant?: "full" | "compact"; // full = rich prose styling, compact = minimal styling for comments
+}
+
+// Regex to match URLs
+const urlRegex = /(https?:\/\/[^\s\)]+)/g;
+
+// Plugin to convert plain text URLs to links
+function rehypeUrlTransform() {
+  return (tree: any) => {
+    visit(tree, "text", (node, index, parent) => {
+      if (!node.value.includes("http")) return;
+
+      const matches = Array.from(node.value.matchAll(urlRegex));
+      if (matches.length === 0) return;
+
+      const children = [];
+      let lastIndex = 0;
+
+      matches.forEach((match) => {
+        const url = match[0];
+        const startIndex = match.index || 0;
+
+        // Add text before URL
+        if (startIndex > lastIndex) {
+          children.push({
+            type: "text",
+            value: node.value.slice(lastIndex, startIndex),
+          });
+        }
+
+        // Add URL as link
+        children.push({
+          type: "element",
+          tagName: "a",
+          properties: { href: url },
+          children: [{ type: "text", value: url }],
+        });
+
+        lastIndex = startIndex + url.length;
+      });
+
+      // Add remaining text
+      if (lastIndex < node.value.length) {
+        children.push({
+          type: "text",
+          value: node.value.slice(lastIndex),
+        });
+      }
+
+      // Replace the text node with the new children
+      if (children.length > 0 && parent) {
+        parent.children.splice(index, 1, ...children);
+      }
+    });
+  };
 }
 
 // Internal component that does the actual rendering
@@ -134,7 +189,7 @@ const MarkdownRenderer = memo(
         )}
       >
         <ReactMarkdown
-          rehypePlugins={[rehypeRaw]}
+          rehypePlugins={[rehypeRaw, rehypeUrlTransform]}
           components={components}
         >
           {content}
