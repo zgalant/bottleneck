@@ -1,6 +1,7 @@
 export { PRHeader } from "./PRHeader";
 export { PRTabs } from "./PRTabs";
 export { CommentsTab } from "./CommentsTab";
+export { CommitsTab } from "./CommitsTab";
 export { FileTree } from "./FileTree";
 export { MergeConfirmDialog } from "./MergeConfirmDialog";
 export { RequestChangesDialog } from "./RequestChangesDialog";

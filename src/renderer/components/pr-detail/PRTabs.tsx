@@ -1,12 +1,13 @@
-import { MessageSquare, FileDiff, MessageCircle } from "lucide-react";
+import { MessageSquare, FileDiff, MessageCircle, GitCommit } from "lucide-react";
 import { cn } from "../../utils/cn";
 
 interface PRTabsProps {
-  activeTab: "conversation" | "files" | "comments";
-  onTabChange: (tab: "conversation" | "files" | "comments") => void;
+  activeTab: "conversation" | "files" | "comments" | "commits";
+  onTabChange: (tab: "conversation" | "files" | "comments" | "commits") => void;
   conversationCount: number;
   filesCount: number;
   openCommentsCount: number;
+  commitsCount: number;
   theme: "dark" | "light";
 }
 
@@ -16,6 +17,7 @@ export function PRTabs({
   conversationCount,
   filesCount,
   openCommentsCount,
+  commitsCount,
   theme,
 }: PRTabsProps) {
   return (
@@ -77,6 +79,24 @@ export function PRTabs({
           )}
         >
           {openCommentsCount}
+        </span>
+      </div>
+      <div
+        onClick={() => onTabChange("commits")}
+        className={cn(
+          "tab flex items-center",
+          activeTab === "commits" && "active",
+        )}
+      >
+        <GitCommit className="w-3 h-3 mr-1" />
+        <span className="text-xs">Commits</span>
+        <span
+          className={cn(
+            "ml-2 px-1 py-0.5 rounded text-xs",
+            theme === "dark" ? "bg-gray-700" : "bg-gray-200",
+          )}
+        >
+          {commitsCount}
         </span>
       </div>
     </div>

@@ -233,6 +233,17 @@ export interface File {
   blob_url: string;
 }
 
+export interface Commit {
+  sha: string;
+  message: string;
+  author: {
+    login: string;
+    avatar_url: string;
+  };
+  committed_at: string;
+  url: string;
+}
+
 export class GitHubAPI {
   private octokit: Octokit;
 
@@ -818,6 +829,30 @@ export class GitHubAPI {
     });
 
     return data as File[];
+  }
+
+  async getPullRequestCommits(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+  ): Promise<Commit[]> {
+    const { data } = await this.octokit.pulls.listCommits({
+      owner,
+      repo,
+      pull_number: pullNumber,
+      per_page: 250,
+    });
+
+    return data.map((commit: any) => ({
+      sha: commit.sha,
+      message: commit.commit.message,
+      author: {
+        login: commit.author?.login || commit.commit.author?.name || "unknown",
+        avatar_url: commit.author?.avatar_url || "",
+      },
+      committed_at: commit.commit.author?.date || "",
+      url: commit.url,
+    }));
   }
 
   async getPullRequestComments(

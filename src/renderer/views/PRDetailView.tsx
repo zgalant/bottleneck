@@ -12,6 +12,7 @@ import {
   Comment,
   Review,
   ReviewThread,
+  Commit,
 } from "../services/github";
 import { cn } from "../utils/cn";
 import {
@@ -30,6 +31,7 @@ import {
   PRHeader,
   PRTabs,
   CommentsTab,
+  CommitsTab,
   FileTree,
   MergeConfirmDialog,
   RequestChangesDialog,
@@ -56,15 +58,16 @@ export default function PRDetailView() {
     number,
   );
 
-  const [activeTab, setActiveTab] = useState<"conversation" | "files" | "comments">(
+  const [activeTab, setActiveTab] = useState<"conversation" | "files" | "comments" | "commits">(
     (location.state as any)?.activeTab || "files",
   );
 
-  const tabs = ["conversation", "files", "comments"] as const;
+  const tabs = ["conversation", "files", "comments", "commits"] as const;
   
   const [pr, setPR] = useState<PullRequest | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [commits, setCommits] = useState<Commit[]>([]);
   const [reviewComments, setReviewComments] = useState<Comment[]>([]);
   const [reviewThreads, setReviewThreads] = useState<ReviewThread[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -330,6 +333,7 @@ export default function PRDetailView() {
     setLoading(true);
     setFiles([]);
     setComments([]);
+    setCommits([]);
     setReviews([]);
     setReviewComments([]);
     setReviewThreads([]);
@@ -355,6 +359,7 @@ export default function PRDetailView() {
 
         setFiles(mockFiles as any);
         setComments(mockComments as any);
+        setCommits([]);
         setReviews(mockReviews as any);
         setReviewComments(mockReviewComments as any);
         setReviewThreads(mockReviewThreads as any);
@@ -369,6 +374,7 @@ export default function PRDetailView() {
           prData,
           filesData,
           commentsData,
+          commitsData,
           reviewsData,
           reviewCommentsData,
           reviewThreadsData,
@@ -377,6 +383,7 @@ export default function PRDetailView() {
             api.getPullRequest(owner, repo, prNumber),
             api.getPullRequestFiles(owner, repo, prNumber),
             api.getPullRequestConversationComments(owner, repo, prNumber),
+            api.getPullRequestCommits(owner, repo, prNumber),
             api.getPullRequestReviews(owner, repo, prNumber),
             api.getPullRequestReviewComments(owner, repo, prNumber),
             api.getPullRequestReviewThreads(owner, repo, prNumber),
@@ -397,6 +404,7 @@ export default function PRDetailView() {
         updatePR(mergedPR);
         setFiles(filesData);
         setComments(commentsData);
+        setCommits(commitsData);
         setReviews(reviewsData);
         setReviewComments(reviewCommentsData);
         setReviewThreads(reviewThreadsData);
@@ -889,6 +897,7 @@ export default function PRDetailView() {
         conversationCount={comments.length + reviews.length}
         filesCount={files.length}
         openCommentsCount={openReviewThreads.length}
+        commitsCount={commits.length}
         theme={theme}
       />
 
@@ -1027,6 +1036,12 @@ export default function PRDetailView() {
             canReply={canReplyToThreads}
             onReply={handleThreadReply}
             onResolve={handleThreadResolve}
+          />
+        )}
+        {activeTab === "commits" && (
+          <CommitsTab
+            commits={commits}
+            theme={theme}
           />
         )}
       </div>
