@@ -177,6 +177,13 @@ export default function CommandPalette() {
   }, [query]);
 
   useEffect(() => {
+    if (!commandPaletteOpen) {
+      setQuery("");
+      setSelectedIndex(0);
+    }
+  }, [commandPaletteOpen]);
+
+  useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (!commandPaletteOpen) return;
       if (e.key === "Escape") {
