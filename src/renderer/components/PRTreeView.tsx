@@ -22,6 +22,7 @@ import {
 import { cn } from "../utils/cn";
 import { getPRIcon, getPRColorClass } from "../utils/prStatus";
 import { AgentIcon } from "./AgentIcon";
+import { getLabelColors } from "../utils/labelColors";
 import type { PullRequest } from "../services/github";
 import type { PRWithMetadata, SortByType } from "../types/prList";
 
@@ -575,6 +576,38 @@ export function PRTreeView({
                                 <div title="No review">
                                   <Clock className="w-3 h-3 text-gray-400" />
                                 </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Labels */}
+                          {item.data.pr.labels && item.data.pr.labels.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              {item.data.pr.labels.slice(0, 3).map((label) => {
+                                const labelColors = getLabelColors(label.color, theme);
+                                return (
+                                  <span
+                                    key={label.name}
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-medium opacity-80"
+                                    style={{
+                                      backgroundColor: labelColors.backgroundColor,
+                                      color: labelColors.color,
+                                    }}
+                                    title={label.name}
+                                  >
+                                    {label.name.length > 12 ? `${label.name.slice(0, 12)}…` : label.name}
+                                  </span>
+                                );
+                              })}
+                              {item.data.pr.labels.length > 3 && (
+                                <span
+                                  className={cn(
+                                    "text-[10px]",
+                                    theme === "dark" ? "text-gray-500" : "text-gray-400"
+                                  )}
+                                >
+                                  +{item.data.pr.labels.length - 3}
+                                </span>
                               )}
                             </div>
                           )}
