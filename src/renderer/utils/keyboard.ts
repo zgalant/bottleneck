@@ -121,6 +121,14 @@ export function setupKeyboardShortcuts() {
         }
         return;
       }
+
+      // Go to settings (Cmd/Ctrl + ,)
+      if (e.key === ",") {
+        e.preventDefault();
+        const nav = (window as any).__commandNavigate;
+        if (nav) nav("/settings");
+        return;
+      }
     }
   };
 

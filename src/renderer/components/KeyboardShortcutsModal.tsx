@@ -16,6 +16,7 @@ const SHORTCUTS = [
       { keys: ["Cmd", "B"], description: "Toggle sidebar" },
       { keys: ["Cmd", "Shift", "B"], description: "Toggle right panel" },
       { keys: ["Cmd", "Left Arrow"], description: "Go back to PR list" },
+      { keys: ["Cmd", ","], description: "Go to settings" },
     ],
   },
   {
