@@ -22,6 +22,7 @@ import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
 import { usePRStore } from "../stores/prStore";
+import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
 import { cn } from "../utils/cn";
 
 interface GroupedRepositories {
@@ -45,9 +46,10 @@ export default function TopBar() {
   const [expandedOrgs, setExpandedOrgs] = React.useState<Set<string>>(
     new Set(),
   );
-  const [activeSection, setActiveSection] = React.useState<"recent" | "all">(
+  const [activeSection, setActiveSection] = React.useState<"recent" | "all" | "starred">(
     "recent",
   );
+  const { favorites } = useRepoFavoritesStore();
   const [searchQuery, setSearchQuery] = React.useState("");
   const matchesRepoSearch = React.useCallback((repo: any, query: string) => {
     if (!query) {
@@ -149,6 +151,23 @@ export default function TopBar() {
       matchesRepoSearch(repo, normalizedQuery),
     );
   }, [recentlyViewedRepos, hasSearchQuery, matchesRepoSearch, normalizedQuery]);
+
+  const starredRepos = React.useMemo(() => {
+    return repositories.filter((repo) => {
+      const repoKey = `${repo.owner}/${repo.name}`;
+      return favorites.some((f) => f.repoKey === repoKey);
+    });
+  }, [repositories, favorites]);
+
+  const filteredStarredRepos = React.useMemo(() => {
+    if (!hasSearchQuery) {
+      return starredRepos;
+    }
+
+    return starredRepos.filter((repo) =>
+      matchesRepoSearch(repo, normalizedQuery),
+    );
+  }, [starredRepos, hasSearchQuery, matchesRepoSearch, normalizedQuery]);
 
   // Get sorted organization names
   const sortedOrgs = React.useMemo(() => {
@@ -331,6 +350,22 @@ export default function TopBar() {
                     Recently Viewed
                   </div>
                   <div
+                    onClick={() => setActiveSection("starred")}
+                    className={cn(
+                      "flex-1 px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center cursor-pointer",
+                      activeSection === "starred"
+                        ? theme === "dark"
+                          ? "bg-gray-700 text-white"
+                          : "bg-gray-100 text-gray-900"
+                        : theme === "dark"
+                          ? "text-gray-400 hover:text-gray-200"
+                          : "text-gray-600 hover:text-gray-900",
+                    )}
+                  >
+                    <Star className="w-3 h-3 inline mr-1.5" />
+                    Starred
+                  </div>
+                  <div
                     onClick={() => setActiveSection("all")}
                     className={cn(
                       "flex-1 px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center cursor-pointer",
@@ -452,6 +487,89 @@ export default function TopBar() {
                             >
                               <X className="w-3 h-3" />
                             </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : activeSection === "starred" ? (
+                    <div className="p-1">
+                      {filteredStarredRepos.length === 0 ? (
+                        <div
+                          className={cn(
+                            "p-4 text-sm text-center",
+                            theme === "dark"
+                              ? "text-gray-400"
+                              : "text-gray-600",
+                          )}
+                        >
+                          {hasSearchQuery
+                            ? `No repositories match "${trimmedQuery}"`
+                            : "No starred repositories"}
+                        </div>
+                      ) : (
+                        filteredStarredRepos.map((repo) => (
+                          <button
+                            key={repo.id}
+                            onClick={() => handleRepoSelect(repo)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 text-sm rounded flex items-start group relative",
+                              theme === "dark"
+                                ? "hover:bg-gray-700"
+                                : "hover:bg-gray-100",
+                              selectedRepo?.id === repo.id &&
+                                (theme === "dark"
+                                  ? "bg-gray-700"
+                                  : "bg-gray-100"),
+                            )}
+                          >
+                            <div className="flex-1 min-w-0 pr-6">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="font-medium truncate"
+                                  title={repo.full_name}
+                                >
+                                  {repo.full_name}
+                                </span>
+                                {repo.private && (
+                                  <span
+                                    className={cn(
+                                      "text-xs px-1.5 py-0.5 rounded",
+                                      theme === "dark"
+                                        ? "bg-gray-600 text-gray-400"
+                                        : "bg-gray-200 text-gray-600",
+                                    )}
+                                  >
+                                    Private
+                                  </span>
+                                )}
+                              </div>
+                              {repo.description && (
+                                <div
+                                  className={cn(
+                                    "text-xs line-clamp-1 mt-0.5",
+                                    theme === "dark"
+                                      ? "text-gray-400"
+                                      : "text-gray-600",
+                                  )}
+                                  title={repo.description}
+                                >
+                                  {repo.description}
+                                </div>
+                              )}
+                            </div>
+                            {repo.stargazers_count > 0 && (
+                              <div
+                                className={cn(
+                                  "text-xs",
+                                  theme === "dark"
+                                    ? "text-gray-500"
+                                    : "text-gray-500",
+                                )}
+                              >
+                                <Star className="w-3 h-3 inline mr-0.5" />
+                                {repo.stargazers_count}
+                              </div>
+                            )}
                           </button>
                         ))
                       )}
