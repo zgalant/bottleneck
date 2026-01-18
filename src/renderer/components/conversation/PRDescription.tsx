@@ -15,9 +15,9 @@ export function PRDescription({ pr, theme }: PRDescriptionProps) {
         <img
           src={pr.user.avatar_url}
           alt={pr.user.login}
-          className="w-10 h-10 rounded-full"
+          className="w-10 h-10 rounded-full flex-shrink-0"
         />
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-2">
             <span className="font-semibold">{pr.user.login}</span>
             <span
@@ -33,10 +33,13 @@ export function PRDescription({ pr, theme }: PRDescriptionProps) {
             </span>
           </div>
           <div
-            className={cn(theme === "dark" ? "text-gray-300" : "text-gray-700")}
+            className={cn(
+              "overflow-hidden",
+              theme === "dark" ? "text-gray-300" : "text-gray-700"
+            )}
           >
             {pr.body ? (
-              <Markdown content={pr.body} variant="compact" />
+              <Markdown content={pr.body} variant="full" />
             ) : (
               <em
                 className={cn(

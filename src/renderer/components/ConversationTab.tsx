@@ -74,7 +74,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
     <div className="flex-1 flex overflow-hidden">
       {/* Main content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           {/* PR Description */}
           <PRDescription pr={pr} theme={theme} />
 
