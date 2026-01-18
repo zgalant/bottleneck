@@ -1,14 +1,16 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePRStore } from "../stores/prStore";
 import { useStatsStore } from "../stores/statsStore";
 import { useUIStore } from "../stores/uiStore";
 import { cn } from "../utils/cn";
-import { GitPullRequest, Code2, Eye } from "lucide-react";
+import { GitPullRequest, Code2, Eye, ArrowUp, ArrowDown } from "lucide-react";
 
 export default function StatsView() {
   const { theme } = useUIStore();
   const { pullRequests } = usePRStore();
   const { calculateStats, currentSnapshot, activity } = useStatsStore();
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     calculateStats(pullRequests);
@@ -21,6 +23,38 @@ export default function StatsView() {
     );
   }, [currentSnapshot]);
 
+  const handleSortClick = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new column with desc direction
+      setSortColumn(column);
+      setSortDirection("desc");
+    }
+  };
+
+  const SortHeader = ({ column, label }: { column: string; label: string }) => (
+    <th
+      onClick={() => handleSortClick(column)}
+      className={cn(
+        "text-right py-3 px-4 font-semibold cursor-pointer hover:bg-gray-600/20 transition-colors",
+        theme === "dark" ? "text-gray-400" : "text-gray-600"
+      )}
+    >
+      <div className="flex items-center justify-end gap-2">
+        <span>{label}</span>
+        {sortColumn === column && (
+          sortDirection === "desc" ? (
+            <ArrowDown className="w-4 h-4" />
+          ) : (
+            <ArrowUp className="w-4 h-4" />
+          )
+        )}
+      </div>
+    </th>
+  );
+
   const activityTableRows = useMemo(() => {
     if (activity.length === 0) return [];
 
@@ -32,7 +66,7 @@ export default function StatsView() {
     });
 
     // Build rows with data from each period
-    return Array.from(allPeople)
+    let rows = Array.from(allPeople)
       .sort()
       .map((personKey) => {
         const rowData: {
@@ -67,7 +101,31 @@ export default function StatsView() {
           "30d_reviewed": number;
         };
       });
-  }, [activity]);
+
+    // Apply sorting
+    if (sortColumn) {
+      rows.sort((a, b) => {
+        let aValue = a[sortColumn];
+        let bValue = b[sortColumn];
+
+        // Handle string comparison
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          const comparison = aValue.localeCompare(bValue);
+          return sortDirection === "asc" ? comparison : -comparison;
+        }
+
+        // Handle number comparison
+        if (typeof aValue === "number" && typeof bValue === "number") {
+          const comparison = aValue - bValue;
+          return sortDirection === "asc" ? comparison : -comparison;
+        }
+
+        return 0;
+      });
+    }
+
+    return rows;
+  }, [activity, sortColumn, sortDirection]);
 
   if (!currentSnapshot) {
     return (
@@ -254,64 +312,32 @@ export default function StatsView() {
                     )}
                   >
                     <th
+                      onClick={() => handleSortClick("person")}
                       className={cn(
-                        "text-left py-3 px-4 font-semibold",
+                        "text-left py-3 px-4 font-semibold cursor-pointer hover:bg-gray-600/20 transition-colors",
                         theme === "dark" ? "text-gray-400" : "text-gray-600"
                       )}
                     >
-                      Person
+                      <div className="flex items-center gap-2">
+                        <span>Person</span>
+                        {sortColumn === "person" && (
+                          sortDirection === "desc" ? (
+                            <ArrowDown className="w-4 h-4" />
+                          ) : (
+                            <ArrowUp className="w-4 h-4" />
+                          )
+                        )}
+                      </div>
                     </th>
                     {/* 1 day */}
-                    <th
-                      className={cn(
-                        "text-right py-3 px-4 font-semibold",
-                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                      )}
-                    >
-                      1d M
-                    </th>
-                    <th
-                      className={cn(
-                        "text-right py-3 px-4 font-semibold",
-                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                      )}
-                    >
-                      1d R
-                    </th>
+                    <SortHeader column="1d_merged" label="1d M" />
+                    <SortHeader column="1d_reviewed" label="1d R" />
                     {/* 7 days */}
-                    <th
-                      className={cn(
-                        "text-right py-3 px-4 font-semibold",
-                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                      )}
-                    >
-                      7d M
-                    </th>
-                    <th
-                      className={cn(
-                        "text-right py-3 px-4 font-semibold",
-                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                      )}
-                    >
-                      7d R
-                    </th>
+                    <SortHeader column="7d_merged" label="7d M" />
+                    <SortHeader column="7d_reviewed" label="7d R" />
                     {/* 30 days */}
-                    <th
-                      className={cn(
-                        "text-right py-3 px-4 font-semibold",
-                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                      )}
-                    >
-                      30d M
-                    </th>
-                    <th
-                      className={cn(
-                        "text-right py-3 px-4 font-semibold",
-                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                      )}
-                    >
-                      30d R
-                    </th>
+                    <SortHeader column="30d_merged" label="30d M" />
+                    <SortHeader column="30d_reviewed" label="30d R" />
                   </tr>
                 </thead>
                 <tbody>
