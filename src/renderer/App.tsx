@@ -9,6 +9,7 @@ import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import RightPanel from "./components/RightPanel";
 import CommandPalette from "./components/CommandPalette";
+import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 import { setupKeyboardShortcuts } from "./utils/keyboard";
 import { cn } from "./utils/cn";
 import { PerfLogger } from "./utils/perfLogger";
@@ -34,7 +35,7 @@ function App() {
   PerfLogger.mark("App component function called");
 
   const { isAuthenticated, checkAuth, token } = useAuthStore();
-  const { sidebarOpen, sidebarWidth, setSidebarWidth, rightPanelOpen, theme, setCurrentPage } =
+  const { sidebarOpen, sidebarWidth, setSidebarWidth, rightPanelOpen, theme, setCurrentPage, keyboardShortcutsOpen, toggleKeyboardShortcuts } =
     useUIStore();
   const { loadSettings } = useSettingsStore();
   const location = useLocation();
@@ -238,6 +239,12 @@ function App() {
       </div>
       {/* Command Palette Overlay */}
       <CommandPalette />
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={keyboardShortcutsOpen}
+        onClose={toggleKeyboardShortcuts}
+        theme={theme}
+      />
     </div>
   );
 }
