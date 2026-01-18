@@ -179,14 +179,18 @@ export function ActivityItem({ activity }: ActivityItemProps) {
           )}
 
           {/* Comment preview */}
-          {activity.commentBody && (
-            <div className={cn(
-              "mt-2 text-xs truncate",
-              theme === "dark" ? "text-gray-400" : "text-gray-600"
-            )}>
-              "{activity.commentBody}"
-            </div>
-          )}
+           {activity.commentBody && (
+             <div className={cn(
+               "mt-2 text-xs p-2.5 rounded border",
+               theme === "dark" 
+                 ? "bg-gray-800/50 border-gray-700 text-gray-300" 
+                 : "bg-gray-50 border-gray-200 text-gray-700"
+             )}>
+               <div className="line-clamp-4 whitespace-pre-wrap break-words">
+                 {activity.commentBody}
+               </div>
+             </div>
+           )}
         </div>
       </div>
     </div>
