@@ -49,8 +49,13 @@ export default function TopBar() {
   const [activeSection, setActiveSection] = React.useState<"recent" | "all" | "starred">(
     "recent",
   );
-  const { favorites } = useRepoFavoritesStore();
+  const { favorites, loadFavorites } = useRepoFavoritesStore();
   const [searchQuery, setSearchQuery] = React.useState("");
+
+  // Load favorites on mount
+  React.useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
   const matchesRepoSearch = React.useCallback((repo: any, query: string) => {
     if (!query) {
       return true;
@@ -154,8 +159,9 @@ export default function TopBar() {
 
   const starredRepos = React.useMemo(() => {
     return repositories.filter((repo) => {
-      const repoKey = `${repo.owner}/${repo.name}`;
-      return favorites.some((f) => f.repoKey === repoKey);
+      // Try both full_name and owner/name format since favorites use owner/name format
+      const repoKey = repo.full_name || `${repo.owner}/${repo.name}`;
+      return favorites.some((f) => f.repoKey === repoKey || f.repoKey === `${repo.owner}/${repo.name}`);
     });
   }, [repositories, favorites]);
 
