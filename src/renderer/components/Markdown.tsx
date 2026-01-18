@@ -72,18 +72,30 @@ const MarkdownRenderer = memo(
     // Custom components for ReactMarkdown
     const components: Components = {
       // Custom image rendering with proper sizing and dark mode support
-      img({ node, ...props }: any) {
-        return (
-          <img
-            {...props}
-            className={cn(
-              "max-w-full h-auto rounded",
-              theme === "dark" ? "opacity-90" : "",
-            )}
-            loading="lazy"
-          />
-        );
-      },
+       img({ node, ...props }: any) {
+         const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+           // Fallback: if image fails to load, try with different approach
+           const img = e.currentTarget;
+           // Log error for debugging
+           console.warn(`Failed to load image: ${img.src}`);
+           // Set a placeholder or minimal styling to indicate failure
+           img.style.opacity = "0.5";
+         };
+
+         return (
+           <img
+             {...props}
+             onError={handleError}
+             className={cn(
+               "max-w-full h-auto rounded",
+               theme === "dark" ? "opacity-90" : "",
+             )}
+             loading="lazy"
+             // Ensure GitHub image URLs work properly
+             crossOrigin="anonymous"
+           />
+         );
+       },
       // Custom link rendering
       a({ node, children, ...props }: any) {
         return (

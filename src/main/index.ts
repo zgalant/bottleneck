@@ -72,14 +72,14 @@ function createWindow() {
           responseHeaders: {
             ...details.responseHeaders,
             "Content-Security-Policy": [
-              "default-src 'self' https://api.github.com https://cdn.jsdelivr.net; " +
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
-              "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-              "img-src 'self' data: https://avatars.githubusercontent.com https://github.com https://*.githubusercontent.com; " +
-              "font-src 'self' data: https://cdn.jsdelivr.net; " +
-              "connect-src 'self' https://api.github.com https://github.com https://cdn.jsdelivr.net http://localhost:* ws://localhost:*; " +
-              "worker-src 'self' blob: https://cdn.jsdelivr.net;",
-            ],
+               "default-src 'self' https://api.github.com https://cdn.jsdelivr.net; " +
+               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+               "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+               "img-src 'self' data: https://avatars.githubusercontent.com https://github.com https://*.githubusercontent.com https://user-images.githubusercontent.com https://github.githubassets.com; " +
+               "font-src 'self' data: https://cdn.jsdelivr.net; " +
+               "connect-src 'self' https://api.github.com https://github.com https://cdn.jsdelivr.net http://localhost:* ws://localhost:*; " +
+               "worker-src 'self' blob: https://cdn.jsdelivr.net;",
+             ],
           },
         });
       },
@@ -96,12 +96,33 @@ function createWindow() {
     );
   }
 
-  // Show window when ready
-  mainWindow.once("ready-to-show", () => {
-    perfLog("Window ready-to-show event fired");
-    mainWindow?.show();
-    perfLog("Window shown");
-  });
+  // Intercept image requests to ensure they have proper headers
+   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+     (details, callback) => {
+       // For GitHub image URLs, ensure we're sending proper headers
+       if (
+         details.url.includes("github.com") ||
+         details.url.includes("githubusercontent.com") ||
+         details.url.includes("user-images.githubusercontent.com")
+       ) {
+         const headers = { ...details.requestHeaders };
+         // GitHub may require User-Agent header for some image requests
+         if (!headers["User-Agent"]) {
+           headers["User-Agent"] = "Bottleneck/1.0";
+         }
+         callback({ requestHeaders: headers });
+       } else {
+         callback({});
+       }
+     },
+   );
+
+   // Show window when ready
+   mainWindow.once("ready-to-show", () => {
+     perfLog("Window ready-to-show event fired");
+     mainWindow?.show();
+     perfLog("Window shown");
+   });
 
   // Debug: Log when page loads
   mainWindow.webContents.on("did-start-loading", () => {
