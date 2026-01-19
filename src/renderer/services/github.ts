@@ -2100,4 +2100,27 @@ export class GitHubAPI {
       throw error;
     }
   }
+
+  /**
+   * Get all active members of an organization
+   */
+  async getOrganizationMembers(org: string): Promise<Array<{
+    login: string;
+    avatar_url: string;
+  }>> {
+    try {
+      const { data } = await this.octokit.orgs.listMembers({
+        org,
+        per_page: 100,
+      });
+
+      return data.map((member: any) => ({
+        login: member.login,
+        avatar_url: member.avatar_url,
+      }));
+    } catch (error) {
+      console.error(`Error fetching organization members for ${org}:`, error);
+      return [];
+    }
+  }
 }

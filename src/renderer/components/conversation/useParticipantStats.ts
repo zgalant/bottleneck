@@ -48,7 +48,11 @@ export function useParticipantStats(
           approvals: 0,
           changesRequested: 0,
           reviewComments: 0,
+          isRequestedReviewer: true,
         });
+      } else {
+        const stat = stats.get(reviewer.login)!;
+        stat.isRequestedReviewer = true;
       }
     });
 

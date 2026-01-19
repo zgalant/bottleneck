@@ -7,6 +7,8 @@ import {
   ExternalLink,
   Check,
   X,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { ParticipantStat } from "./types";
@@ -15,9 +17,20 @@ import { VercelDeploymentCard } from "./VercelDeploymentCard";
 interface ParticipantCardProps {
   participant: ParticipantStat;
   theme: "light" | "dark";
+  onRequestReview?: (username: string) => void;
+  isRequestingReview?: boolean;
+  canRequestReview?: boolean;
+  isAuthor?: boolean;
 }
 
-export function ParticipantCard({ participant, theme }: ParticipantCardProps) {
+export function ParticipantCard({
+  participant,
+  theme,
+  onRequestReview,
+  isRequestingReview,
+  canRequestReview,
+  isAuthor,
+}: ParticipantCardProps) {
   return (
     <div
       className={cn(
@@ -32,7 +45,7 @@ export function ParticipantCard({ participant, theme }: ParticipantCardProps) {
           className="w-10 h-10 rounded-full"
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
               <div className="font-medium text-sm truncate flex items-center">
                 {participant.user.login}
@@ -51,7 +64,7 @@ export function ParticipantCard({ participant, theme }: ParticipantCardProps) {
                 {participant.role}
               </div>
             </div>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1 flex-shrink-0">
               {participant.latestReviewState === "APPROVED" && (
                 <div
                   className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20"
@@ -68,6 +81,30 @@ export function ParticipantCard({ participant, theme }: ParticipantCardProps) {
                   <X className="w-3 h-3 text-red-400" />
                 </div>
               )}
+              {canRequestReview &&
+                !participant.isRequestedReviewer &&
+                !participant.isBot &&
+                !isAuthor && (
+                  <button
+                    onClick={() => onRequestReview?.(participant.user.login)}
+                    disabled={isRequestingReview}
+                    className={cn(
+                      "flex items-center justify-center w-5 h-5 rounded transition-colors",
+                      isRequestingReview
+                        ? "opacity-50 cursor-not-allowed"
+                        : theme === "dark"
+                          ? "hover:bg-gray-700 text-gray-400 hover:text-blue-400"
+                          : "hover:bg-gray-100 text-gray-500 hover:text-blue-600",
+                    )}
+                    title="Request review"
+                  >
+                    {isRequestingReview ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Plus className="w-3 h-3" />
+                    )}
+                  </button>
+                )}
             </div>
           </div>
 

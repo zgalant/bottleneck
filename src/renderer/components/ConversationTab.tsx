@@ -108,7 +108,15 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
       </div>
 
       {/* Participants Sidebar */}
-      <ParticipantsSidebar participants={participantStats} theme={theme} />
+      <ParticipantsSidebar
+        participants={participantStats}
+        theme={theme}
+        owner={pr.base.repo.owner.login}
+        repo={pr.base.repo.name}
+        prNumber={pr.number}
+        prAuthor={pr.user.login}
+        currentUser={user?.login}
+      />
     </div>
   );
 });

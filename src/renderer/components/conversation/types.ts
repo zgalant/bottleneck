@@ -18,6 +18,7 @@ export interface ParticipantStat {
   latestCommentLinks?: { text: string; url: string }[];
   vercelDeployments?: VercelDeployment[];
   isBot?: boolean;
+  isRequestedReviewer?: boolean;
 }
 
 export interface TimelineItem {

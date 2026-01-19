@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag } from "lucide-react";
+import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -242,6 +242,16 @@ export default function CommandPalette() {
           useUIStore.getState().triggerApprovePR();
         },
         preview: <div>Approve this pull request</div>,
+      });
+      cmds.push({
+        id: "add-reviewers",
+        name: "Add Reviewers",
+        keywords: "reviewers add request review",
+        icon: Users,
+        action: () => {
+          useUIStore.getState().setAddReviewersDialogOpen(true);
+        },
+        preview: <div>Open reviewer selection dialog</div>,
       });
       cmds.push({
         id: "focus-comment",
