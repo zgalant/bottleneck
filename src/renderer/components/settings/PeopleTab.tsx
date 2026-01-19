@@ -1,25 +1,37 @@
 import { useEffect, useState } from "react";
 import { useOrgStore } from "../../stores/orgStore";
-import { useAuthStore } from "../../stores/authStore";
+import { usePRStore } from "../../stores/prStore";
 import { useUIStore } from "../../stores/uiStore";
 import { cn } from "../../utils/cn";
 
 export default function PeopleTab() {
   const { theme } = useUIStore();
-  const { user } = useAuthStore();
+  const { repositories } = usePRStore();
   const { fetchOrgMembers } = useOrgStore();
   const [members, setMembers] = useState<Array<{ login: string; avatar_url: string; name?: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
+
+  const orgs = Array.from(new Set(repositories.map((r) => r.owner)));
 
   useEffect(() => {
     const loadMembers = async () => {
-      if (!user) return;
+      if (!selectedOrg && orgs.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const org = selectedOrg || orgs[0];
+      if (!org) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
       try {
-        const org = user.login;
         const orgMembers = await fetchOrgMembers(org);
         setMembers(orgMembers);
+        setSelectedOrg(org);
       } catch (error) {
         console.error("Failed to load org members:", error);
       } finally {
@@ -28,7 +40,7 @@ export default function PeopleTab() {
     };
 
     loadMembers();
-  }, [user, fetchOrgMembers]);
+  }, [selectedOrg, orgs, fetchOrgMembers]);
 
   if (loading) {
     return (
@@ -43,16 +55,60 @@ export default function PeopleTab() {
     );
   }
 
-  return (
-    <div className="p-6">
-      <h2
+  if (orgs.length === 0) {
+    return (
+      <div
         className={cn(
-          "text-lg font-semibold mb-4",
-          theme === "dark" ? "text-white" : "text-gray-900",
+          "p-6 text-center",
+          theme === "dark" ? "text-gray-400" : "text-gray-600",
         )}
       >
-        Team Members
-      </h2>
+        No organizations found. Start by adding repositories to view team members.
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h2
+          className={cn(
+            "text-lg font-semibold mb-4",
+            theme === "dark" ? "text-white" : "text-gray-900",
+          )}
+        >
+          Team Members
+        </h2>
+        
+        {orgs.length > 1 && (
+          <div className="mb-4">
+            <label
+              className={cn(
+                "block text-sm font-medium mb-2",
+                theme === "dark" ? "text-gray-300" : "text-gray-700",
+              )}
+            >
+              Organization
+            </label>
+            <select
+              value={selectedOrg || ""}
+              onChange={(e) => setSelectedOrg(e.target.value)}
+              className={cn(
+                "input w-48",
+                theme === "dark"
+                  ? "bg-gray-800 border-gray-600 text-white"
+                  : "bg-white border-gray-300 text-gray-900",
+              )}
+            >
+              {orgs.map((org) => (
+                <option key={org} value={org}>
+                  {org}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       <div
         className={cn(
