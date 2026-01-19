@@ -1,7 +1,9 @@
-import { useState, useRef, useImperativeHandle, forwardRef } from "react";
+import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { PullRequest, Comment, Review } from "../../services/github";
+import { MentionTypeahead } from "../MentionTypeahead";
+import { useOrgStore } from "../../stores/orgStore";
 
 export type CommentSubmitResult = 
   | { type: "comment"; comment: Comment }
@@ -31,13 +33,128 @@ export const CommentForm = forwardRef<CommentFormRef, CommentFormProps>(function
   const [reviewType, setReviewType] = useState<
     "comment" | "approve" | "request_changes"
   >("comment");
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [orgMembers, setOrgMembers] = useState<Array<{ login: string; avatar_url: string }>>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fetchOrgMembers = useOrgStore((state) => state.fetchOrgMembers);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
       textareaRef.current?.focus();
     },
   }));
+
+  // Fetch org members for mentions
+  useEffect(() => {
+    const org = pr.base.repo.owner.login;
+    fetchOrgMembers(org).then((members) => {
+      setOrgMembers(members);
+    });
+  }, [pr.base.repo.owner.login, fetchOrgMembers]);
+
+  // Get all potential mentions (all org members)
+  const allMentionCandidates = orgMembers;
+
+  // Filter mention candidates based on query
+  const filteredMentionCandidates = mentionQuery
+    ? allMentionCandidates.filter((candidate) =>
+        candidate.login.toLowerCase().includes(mentionQuery.toLowerCase())
+      )
+    : [];
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    const pos = e.target.selectionStart;
+    setCommentText(text);
+    setCursorPosition(pos);
+
+    // Check if we're after an @ symbol
+    const textBeforeCursor = text.substring(0, pos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      // Check if @ is at start or after whitespace
+      const beforeAt = textBeforeCursor[lastAtIndex - 1];
+      if (lastAtIndex === 0 || /\s/.test(beforeAt)) {
+        const query = textBeforeCursor.substring(lastAtIndex + 1);
+        // Only show menu if query is alphanumeric (no spaces)
+        if (/^\w*$/.test(query)) {
+          setMentionQuery(query);
+          setShowMentionMenu(true);
+          setSelectedMentionIndex(0);
+          return;
+        }
+      }
+    }
+
+    setShowMentionMenu(false);
+    setMentionQuery("");
+  };
+
+  const handleMention = (login: string) => {
+    const text = commentText;
+    const textBeforeCursor = text.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      // Replace @query with @login
+      const before = text.substring(0, lastAtIndex + 1);
+      const after = text.substring(cursorPosition);
+      const newText = `${before}${login} ${after}`;
+      setCommentText(newText);
+
+      // Reset mention state
+      setShowMentionMenu(false);
+      setMentionQuery("");
+
+      // Set cursor after the mention
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPos = lastAtIndex + login.length + 2;
+          textareaRef.current.selectionStart = newCursorPos;
+          textareaRef.current.selectionEnd = newCursorPos;
+        }
+      }, 0);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle mention menu navigation
+    if (showMentionMenu && filteredMentionCandidates.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedMentionIndex((prev) =>
+          (prev + 1) % filteredMentionCandidates.length
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedMentionIndex((prev) =>
+          prev === 0 ? filteredMentionCandidates.length - 1 : prev - 1
+        );
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleMention(filteredMentionCandidates[selectedMentionIndex].login);
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowMentionMenu(false);
+        return;
+      }
+    }
+
+    // Original submit handling
+    if (e.key === "Enter" && e.metaKey && commentText.trim() && !isSubmitting) {
+      e.preventDefault();
+      handleSubmitComment();
+    }
+  };
 
   const handleSubmitComment = async () => {
     if (!commentText.trim() || !token || !user) return;
@@ -109,19 +226,23 @@ export const CommentForm = forwardRef<CommentFormRef, CommentFormProps>(function
           alt={user?.login || "You"}
           className="w-8 h-8 rounded-full"
         />
-        <div className="flex-1">
+        <div className="flex-1 relative">
+          <MentionTypeahead
+            value={mentionQuery}
+            candidates={filteredMentionCandidates}
+            onMention={handleMention}
+            theme={theme}
+            isOpen={showMentionMenu && filteredMentionCandidates.length > 0}
+            selectedIndex={selectedMentionIndex}
+            onSelectedIndexChange={setSelectedMentionIndex}
+          />
           <textarea
             ref={textareaRef}
             value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.metaKey && commentText.trim() && !isSubmitting) {
-                e.preventDefault();
-                handleSubmitComment();
-              }
-            }}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
             className="input w-full h-32 resize-none mb-3"
-            placeholder="Leave a comment... (⌘↵ to submit)"
+            placeholder="Leave a comment... (⌘↵ to submit, @ to mention)"
           />
 
           <div className="flex items-center justify-between">
