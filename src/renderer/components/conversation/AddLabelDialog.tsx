@@ -1,4 +1,4 @@
-import { X, Loader2, Plus, ChevronDown } from "lucide-react";
+import { X, Loader2, Plus, ChevronDown, Check } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { cn } from "../../utils/cn";
 import { getLabelColors } from "../../utils/labelColors";
@@ -61,21 +61,33 @@ export function AddLabelDialog({
   // Filter and sort with fuzzy search
   const filteredLabels = useMemo(() => {
     const selectedSet = new Set(selectedLabels);
-    const available = availableLabels.filter((l) => !selectedSet.has(l.name));
 
     if (!searchQuery.trim()) {
-      return available.sort((a, b) => a.name.localeCompare(b.name));
+      // Sort with selected labels first, then unselected
+      return availableLabels.sort((a, b) => {
+        const aSelected = selectedSet.has(a.name);
+        const bSelected = selectedSet.has(b.name);
+        if (aSelected !== bSelected) {
+          return aSelected ? -1 : 1; // Selected labels first
+        }
+        return a.name.localeCompare(b.name);
+      });
     }
 
     // Score and filter based on fuzzy match
-    const scored = available
+    const scored = availableLabels
       .map((label) => ({
         ...label,
         score: fuzzyMatch(searchQuery, label.name),
+        isSelected: selectedSet.has(label.name),
       }))
       .filter((l) => l.score >= 0)
       .sort((a, b) => {
-        // Sort by score first, then alphabetically
+        // Selected labels first
+        if (a.isSelected !== b.isSelected) {
+          return a.isSelected ? -1 : 1;
+        }
+        // Then sort by score, then alphabetically
         if (b.score !== a.score) {
           return b.score - a.score;
         }
@@ -225,18 +237,19 @@ export function AddLabelDialog({
           ) : (
             <div className="divide-y" style={{ borderColor: "inherit" }}>
               {filteredLabels.map((label, index) => {
+                const isSelected = selectedLabels.includes(label.name);
                 const { bgColor, textColor } = getLabelColors(label.color, theme);
 
                 return (
                   <button
                     key={label.name}
-                    onClick={() => handleSelect(label.name)}
+                    onClick={() => !isSelected && handleSelect(label.name)}
                     onMouseEnter={() => setHighlightedIndex(index)}
-                    disabled={isLoading}
+                    disabled={isLoading || isSelected}
                     className={cn(
                       "w-full px-4 py-3 flex items-center space-x-3 transition-colors text-left",
-                      isLoading
-                        ? "opacity-50 cursor-not-allowed"
+                      isLoading || isSelected
+                        ? "opacity-60 cursor-not-allowed"
                         : highlightedIndex === index
                           ? theme === "dark"
                             ? "bg-blue-600 bg-opacity-30"
@@ -245,7 +258,8 @@ export function AddLabelDialog({
                             ? "hover:bg-gray-700"
                             : "hover:bg-gray-50",
                       selectedLabelName === label.name &&
-                        (theme === "dark" ? "bg-gray-700" : "bg-gray-100")
+                        (theme === "dark" ? "bg-gray-700" : "bg-gray-100"),
+                      isSelected && (theme === "dark" ? "bg-gray-700 bg-opacity-50" : "bg-gray-50")
                     )}
                   >
                     <div
@@ -274,6 +288,8 @@ export function AddLabelDialog({
                     </div>
                     {selectedLabelName === label.name && isLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                    ) : isSelected ? (
+                      <Check className="w-4 h-4 flex-shrink-0 text-green-500" />
                     ) : highlightedIndex === index ? (
                       <ChevronDown className="w-4 h-4 flex-shrink-0" />
                     ) : (

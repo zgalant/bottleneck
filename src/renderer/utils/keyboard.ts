@@ -74,21 +74,15 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
+      // Add label (Cmd/Ctrl + L) - only on PR detail page (handled via menu IPC)
+      // This fallback is kept for the renderer keyboard handler, but the menu
+      // handles the actual shortcut detection on macOS/Windows
+
       // Toggle word wrap (Cmd/Ctrl + Shift + L)
       if ((e.key === "l" || e.key === "L") && e.shiftKey) {
         e.preventDefault();
         useUIStore.getState().toggleWordWrap();
         return;
-      }
-
-      // Add label (Cmd/Ctrl + L) - only on PR detail page
-      if ((e.key === "l" || e.key === "L") && !e.shiftKey) {
-        const pathMatch = window.location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
-        if (pathMatch) {
-          e.preventDefault();
-          useUIStore.getState().setAddLabelDialogOpen(true);
-          return;
-        }
       }
 
       // Approve PR (Cmd/Ctrl + Shift + A)
@@ -161,10 +155,18 @@ export function setupKeyboardShortcuts() {
     useUIStore.getState().toggleKeyboardShortcuts();
   };
 
+  const handleAddLabel = () => {
+    const pathMatch = window.location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
+    if (pathMatch) {
+      useUIStore.getState().setAddLabelDialogOpen(true);
+    }
+  };
+
   window.electron.on("toggle-sidebar", handleToggleSidebar);
   window.electron.on("toggle-right-panel", handleToggleRightPanel);
   window.electron.on("open-command-palette", handleOpenCommandPalette);
   window.electron.on("show-shortcuts", handleShowShortcuts);
+  window.electron.on("add-label", handleAddLabel);
 
   return () => {
     document.removeEventListener("keydown", handleKeyDown);
@@ -172,5 +174,6 @@ export function setupKeyboardShortcuts() {
     window.electron.off("toggle-right-panel", handleToggleRightPanel);
     window.electron.off("open-command-palette", handleOpenCommandPalette);
     window.electron.off("show-shortcuts", handleShowShortcuts);
+    window.electron.off("add-label", handleAddLabel);
   };
 }
