@@ -1643,17 +1643,42 @@ export class GitHubAPI {
     owner: string,
     repo: string,
   ): Promise<Array<{ name: string; color: string; description: string | null }>> {
-    const { data } = await this.octokit.issues.listLabelsForRepo({
-      owner,
-      repo,
-      per_page: 100,
-    });
+    const allLabels: Array<{ name: string; color: string; description: string | null }> = [];
+    let page = 1;
+    const per_page = 100;
 
-    return data.map(label => ({
-      name: label.name,
-      color: label.color,
-      description: label.description,
-    }));
+    while (true) {
+      const { data } = await this.octokit.issues.listLabelsForRepo({
+        owner,
+        repo,
+        per_page,
+        page,
+      });
+
+      if (data.length === 0) break;
+
+      allLabels.push(...data.map(label => ({
+        name: label.name,
+        color: label.color,
+        description: label.description,
+      })));
+
+      console.log(`[API] 📌 Fetched labels page ${page}: ${data.length} items (total so far: ${allLabels.length})`);
+
+      // If we got less than per_page, we're on the last page
+      if (data.length < per_page) break;
+
+      page++;
+
+      // Safety limit to avoid infinite loops
+      if (page > 50) {
+        console.warn(`[API] ⚠️ Reached page limit of 50 for labels, stopping pagination`);
+        break;
+      }
+    }
+
+    console.log(`[API] ✅ Total labels fetched: ${allLabels.length}`);
+    return allLabels;
   }
 
   async createLabel(
