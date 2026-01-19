@@ -2140,11 +2140,30 @@ export class GitHubAPI {
         per_page: 100,
       });
 
-      return data.map((member: any) => ({
-        login: member.login,
-        avatar_url: member.avatar_url,
-        name: member.name || undefined,
-      }));
+      // Fetch full user details for each member to get their name
+      const membersWithNames = await Promise.all(
+        data.map(async (member: any) => {
+          try {
+            const { data: userDetails } = await this.octokit.users.getByUsername({
+              username: member.login,
+            });
+            return {
+              login: userDetails.login,
+              avatar_url: userDetails.avatar_url,
+              name: userDetails.name || undefined,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch details for ${member.login}:`, error);
+            return {
+              login: member.login,
+              avatar_url: member.avatar_url,
+              name: undefined,
+            };
+          }
+        })
+      );
+
+      return membersWithNames;
     } catch (error) {
       console.error(`Error fetching organization members for ${org}:`, error);
       return [];
