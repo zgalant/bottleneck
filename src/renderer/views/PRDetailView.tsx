@@ -122,17 +122,87 @@ export default function PRDetailView() {
       // First, open the command palette, then simulate opening the URL mode
       window.dispatchEvent(new CustomEvent("pr-action:trigger-url-mode", { detail: { pr } }));
     };
+    const onNavigatePrevious = () => {
+      if (navigationState?.siblingPRs && navigationState.siblingPRs.length > 0) {
+        const currentIndex = navigationState.siblingPRs.findIndex(
+          (p: any) => p.number === parseInt(number || "0", 10)
+        );
+        if (currentIndex > 0) {
+          const prevPR = navigationState.siblingPRs[currentIndex - 1];
+          const nav = (window as any).__commandNavigate;
+          if (nav && owner && repo) {
+            nav(`/pulls/${owner}/${repo}/${prevPR.number}`);
+          }
+        }
+      }
+    };
+    const onNavigateNext = () => {
+      if (navigationState?.siblingPRs && navigationState.siblingPRs.length > 0) {
+        const currentIndex = navigationState.siblingPRs.findIndex(
+          (p: any) => p.number === parseInt(number || "0", 10)
+        );
+        if (currentIndex < navigationState.siblingPRs.length - 1) {
+          const nextPR = navigationState.siblingPRs[currentIndex + 1];
+          const nav = (window as any).__commandNavigate;
+          if (nav && owner && repo) {
+            nav(`/pulls/${owner}/${repo}/${nextPR.number}`);
+          }
+        }
+      }
+    };
+    const onShipIt = async () => {
+      if (!pr || !token) return;
+      try {
+        // Add shipit label
+        const { GitHubAPI } = await import("../services/github");
+        const api = new GitHubAPI(token);
+        await api.addLabels(
+          pr.base.repo.owner.login,
+          pr.base.repo.name,
+          pr.number,
+          ["shipit"]
+        );
+        
+        // Update the store with optimistic update
+        const { usePRStore } = await import("../stores/prStore");
+        const prStore = usePRStore.getState();
+        const key = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+        const currentPR = prStore.pullRequests.get(key);
+        
+        if (currentPR && !currentPR.labels.some((l: any) => l.name === "shipit")) {
+          const updatedPR = {
+            ...currentPR,
+            labels: [
+              ...currentPR.labels,
+              {
+                name: "shipit",
+                color: "ff6600",
+              },
+            ],
+          };
+          prStore.updatePR(updatedPR);
+        }
+      } catch (error) {
+        console.error("Failed to add shipit label:", error);
+      }
+    };
 
     window.addEventListener("pr-action:approve", onApprove);
     window.addEventListener("pr-action:focus-comment", onFocusComment);
     window.addEventListener("pr-action:open-urls", onOpenURLs);
+    window.addEventListener("pr-action:navigate-previous", onNavigatePrevious);
+    window.addEventListener("pr-action:navigate-next", onNavigateNext);
+    window.addEventListener("pr-action:ship-it", onShipIt);
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
       window.removeEventListener("pr-action:focus-comment", onFocusComment);
       window.removeEventListener("pr-action:open-urls", onOpenURLs);
+      window.removeEventListener("pr-action:navigate-previous", onNavigatePrevious);
+      window.removeEventListener("pr-action:navigate-next", onNavigateNext);
+      window.removeEventListener("pr-action:ship-it", onShipIt);
     };
-  }, [pr]);
+  }, [pr, navigationState, owner, repo, number, token]);
 
   useEffect(() => {
     // Load data even without token if in dev mode

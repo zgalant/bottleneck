@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag } from "lucide-react";
+import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -281,6 +281,19 @@ export default function CommandPalette() {
           navigator.clipboard.writeText(`gh pr checkout ${prNumber}`);
         },
         preview: <div>Copy "gh pr checkout {prNumber}" to clipboard</div>,
+      });
+      cmds.push({
+        id: "ship-it",
+        name: "Ship It",
+        keywords: "ship shipit approve label merge ready",
+        icon: Ship,
+        action: () => {
+          // Approve PR
+          useUIStore.getState().triggerApprovePR();
+          // Add shipit label
+          window.dispatchEvent(new CustomEvent("pr-action:ship-it"));
+        },
+        preview: <div>Approve PR and add the "shipit" label</div>,
       });
     }
 
