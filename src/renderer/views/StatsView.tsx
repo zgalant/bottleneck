@@ -3,7 +3,7 @@ import { usePRStore } from "../stores/prStore";
 import { useStatsStore } from "../stores/statsStore";
 import { useUIStore } from "../stores/uiStore";
 import { cn } from "../utils/cn";
-import { GitPullRequest, Code2, Eye, ArrowUp, ArrowDown } from "lucide-react";
+import { GitPullRequest, Code2, Eye, ArrowUp, ArrowDown, Ship } from "lucide-react";
 
 export default function StatsView() {
   const { theme } = useUIStore();
@@ -145,23 +145,33 @@ export default function StatsView() {
   return (
     <div
       className={cn(
-        "flex-1 overflow-auto",
+        "flex-1 flex flex-col overflow-hidden",
         theme === "dark" ? "bg-gray-900 text-gray-100" : "bg-white text-gray-900"
       )}
     >
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">PR Status</h1>
-          <p
-            className={cn(
-              "mt-2",
-              theme === "dark" ? "text-gray-400" : "text-gray-600"
-            )}
-          >
-            Current snapshot and recent activity
-          </p>
-        </div>
+      {/* Sticky Header */}
+      <div
+        className={cn(
+          "sticky top-0 z-10 p-6 border-b",
+          theme === "dark"
+            ? "bg-gray-900 border-gray-700"
+            : "bg-white border-gray-200"
+        )}
+      >
+        <h1 className="text-3xl font-bold">PR Status</h1>
+        <p
+          className={cn(
+            "mt-2",
+            theme === "dark" ? "text-gray-400" : "text-gray-600"
+          )}
+        >
+          Current snapshot and recent activity
+        </p>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 max-w-7xl mx-auto space-y-6">
 
         {/* Current Snapshot */}
         <div
@@ -173,7 +183,44 @@ export default function StatsView() {
           )}
         >
           <h2 className="text-xl font-bold mb-4">Current Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Ready to Ship Card */}
+            <div
+              className={cn(
+                "p-4 rounded-lg border flex items-center gap-4",
+                theme === "dark"
+                  ? "bg-gray-900 border-gray-600"
+                  : "bg-white border-gray-200"
+              )}
+            >
+              <div>
+                <Ship
+                  className={cn(
+                    "w-10 h-10",
+                    theme === "dark" ? "text-green-400" : "text-green-600"
+                  )}
+                />
+              </div>
+              <div>
+                <p
+                  className={cn(
+                    "text-sm font-medium",
+                    theme === "dark" ? "text-gray-400" : "text-gray-600"
+                  )}
+                >
+                  Ready to Ship
+                </p>
+                <p
+                  className={cn(
+                    "text-3xl font-bold mt-1",
+                    theme === "dark" ? "text-green-400" : "text-green-600"
+                  )}
+                >
+                  {currentSnapshot.readyToShip}
+                </p>
+              </div>
+            </div>
+
             {/* Open PRs Card */}
             <div
               className={cn(
@@ -250,42 +297,162 @@ export default function StatsView() {
           </div>
 
           {/* Reviewed By */}
-          {reviewedByPersonArray.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-700">
-              <h3 className="text-lg font-semibold mb-3">Reviewed By (Current)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {reviewedByPersonArray.map((person) => (
-                  <div
-                    key={person.name}
-                    className={cn(
-                      "p-3 rounded-lg border text-center",
-                      theme === "dark"
-                        ? "bg-gray-900 border-gray-600"
-                        : "bg-white border-gray-200"
-                    )}
-                  >
-                    {person.avatarUrl && (
-                      <img
-                        src={person.avatarUrl}
-                        alt={person.name}
-                        className="w-8 h-8 rounded-full mx-auto mb-2"
-                      />
-                    )}
-                    <p className="text-sm font-medium">{person.name}</p>
-                    <p
-                      className={cn(
-                        "text-lg font-bold mt-1",
-                        theme === "dark" ? "text-blue-400" : "text-blue-600"
-                      )}
-                    >
-                      {person.reviewCount}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+           {reviewedByPersonArray.length > 0 && (
+             <div className="mt-6 pt-6 border-t border-gray-700">
+               <h3 className="text-lg font-semibold mb-3">Reviewed By (Current)</h3>
+               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                 {reviewedByPersonArray.map((person) => (
+                   <div
+                     key={person.name}
+                     className={cn(
+                       "p-3 rounded-lg border text-center",
+                       theme === "dark"
+                         ? "bg-gray-900 border-gray-600"
+                         : "bg-white border-gray-200"
+                     )}
+                   >
+                     {person.avatarUrl && (
+                       <img
+                         src={person.avatarUrl}
+                         alt={person.name}
+                         className="w-8 h-8 rounded-full mx-auto mb-2"
+                       />
+                     )}
+                     <p className="text-sm font-medium">{person.name}</p>
+                     <p
+                       className={cn(
+                         "text-lg font-bold mt-1",
+                         theme === "dark" ? "text-blue-400" : "text-blue-600"
+                       )}
+                     >
+                       {person.reviewCount}
+                     </p>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+
+           {/* Per-Person Current Stats Table */}
+           {currentSnapshot.personStats && currentSnapshot.personStats.length > 0 && (
+             <div className="mt-6 pt-6 border-t" style={{ borderColor: theme === "dark" ? "#555" : "#ddd" }}>
+               <h3 className="text-lg font-semibold mb-3">Per-Person Current Stats</h3>
+               <div className="overflow-x-auto">
+                 <table className="w-full text-sm">
+                   <thead>
+                     <tr
+                       className={cn(
+                         "border-b",
+                         theme === "dark" ? "border-gray-700" : "border-gray-200"
+                       )}
+                     >
+                       <th
+                         className={cn(
+                           "text-left py-3 px-4 font-semibold",
+                           theme === "dark" ? "text-gray-400" : "text-gray-600"
+                         )}
+                       >
+                         Person
+                       </th>
+                       <th
+                         className={cn(
+                           "text-right py-3 px-4 font-semibold",
+                           theme === "dark" ? "text-gray-400" : "text-gray-600"
+                         )}
+                       >
+                         Open
+                       </th>
+                       <th
+                         className={cn(
+                           "text-right py-3 px-4 font-semibold",
+                           theme === "dark" ? "text-gray-400" : "text-gray-600"
+                         )}
+                       >
+                         Draft
+                       </th>
+                       <th
+                         className={cn(
+                           "text-right py-3 px-4 font-semibold",
+                           theme === "dark" ? "text-gray-400" : "text-gray-600"
+                         )}
+                       >
+                         Assigned for Review
+                       </th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {currentSnapshot.personStats.map((person) => (
+                       <tr
+                         key={person.login}
+                         className={cn(
+                           "border-b transition-colors",
+                           theme === "dark"
+                             ? "border-gray-700 hover:bg-gray-700/50"
+                             : "border-gray-200 hover:bg-gray-50"
+                         )}
+                       >
+                         <td className="py-3 px-4">
+                           <div className="flex items-center gap-2">
+                             {person.avatarUrl && (
+                               <img
+                                 src={person.avatarUrl}
+                                 alt={person.name}
+                                 className="w-6 h-6 rounded-full"
+                               />
+                             )}
+                             <span className="font-medium">{person.name}</span>
+                           </div>
+                         </td>
+                         <td
+                           className={cn(
+                             "text-right py-3 px-4 font-semibold",
+                             person.open > 0
+                               ? theme === "dark"
+                                 ? "text-yellow-400"
+                                 : "text-yellow-600"
+                               : theme === "dark"
+                                 ? "text-gray-500"
+                                 : "text-gray-400"
+                           )}
+                         >
+                           {person.open}
+                         </td>
+                         <td
+                           className={cn(
+                             "text-right py-3 px-4 font-semibold",
+                             person.draft > 0
+                               ? theme === "dark"
+                                 ? "text-purple-400"
+                                 : "text-purple-600"
+                               : theme === "dark"
+                                 ? "text-gray-500"
+                                 : "text-gray-400"
+                           )}
+                         >
+                           {person.draft}
+                         </td>
+                         <td
+                           className={cn(
+                             "text-right py-3 px-4 font-semibold",
+                             person.assignedForReview > 0
+                               ? theme === "dark"
+                                 ? "text-blue-400"
+                                 : "text-blue-600"
+                               : theme === "dark"
+                                 ? "text-gray-500"
+                                 : "text-gray-400"
+                           )}
+                         >
+                           {person.assignedForReview}
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             </div>
+           )}
+          </div>
 
         {/* Activity Table */}
         {activityTableRows.length > 0 && (
@@ -457,6 +624,7 @@ export default function StatsView() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -175,6 +175,16 @@ const commands: Command[] = [
     preview: <div>View real-time activity from all repositories</div>,
   },
   {
+    id: "nav-shipyard",
+    name: "Go to Shipyard",
+    keywords: "navigate shipyard ship ready approved shipit",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/shipyard");
+    },
+    preview: <div>View PRs ready to ship (approved or labeled "shipit")</div>,
+  },
+  {
     id: "show-shortcuts",
     name: "Show Keyboard Shortcuts",
     keywords: "help shortcuts",

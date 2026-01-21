@@ -12,10 +12,21 @@ export interface PersonStats {
   closed: number;
 }
 
+export interface PersonCurrentStats {
+  login: string;
+  name: string;
+  avatarUrl?: string;
+  open: number;
+  draft: number;
+  assignedForReview: number;
+}
+
 export interface CurrentSnapshot {
   totalOpen: number;
   totalDraft: number;
+  readyToShip: number;
   reviewedByPerson: Map<string, { name: string; avatarUrl?: string; reviewCount: number }>;
+  personStats: PersonCurrentStats[];
 }
 
 export interface ActivityPeriod {
@@ -57,7 +68,9 @@ export const useStatsStore = create<StatsState>((set) => ({
 function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): CurrentSnapshot {
   let totalOpen = 0;
   let totalDraft = 0;
+  let readyToShip = 0;
   const reviewedByPerson = new Map<string, { name: string; avatarUrl?: string; reviewCount: number }>();
+  const personStatsMap = new Map<string, PersonCurrentStats>();
 
   pullRequests.forEach((pr) => {
     // Count current open and draft PRs
@@ -67,6 +80,55 @@ function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): Curre
       } else {
         totalOpen++;
       }
+
+      // Count ready to ship: approved OR has shipit label
+      const hasApproval =
+        pr.review_decision === 'approved' ||
+        (Array.isArray(pr.approvedBy) && pr.approvedBy.length > 0);
+      const hasShipitLabel =
+        Array.isArray(pr.labels) &&
+        pr.labels.some((l: any) => l.name === 'shipit');
+
+      if (hasApproval || hasShipitLabel) {
+        readyToShip++;
+      }
+
+      // Count per-person open/draft stats
+      const authorLogin = pr.user.login;
+      if (!personStatsMap.has(authorLogin)) {
+        personStatsMap.set(authorLogin, {
+          login: authorLogin,
+          name: pr.user.login,
+          avatarUrl: pr.user.avatar_url,
+          open: 0,
+          draft: 0,
+          assignedForReview: 0,
+        });
+      }
+      const stats = personStatsMap.get(authorLogin)!;
+      if (pr.draft) {
+        stats.draft++;
+      } else {
+        stats.open++;
+      }
+    }
+
+    // Count reviewers assigned to review
+    if (Array.isArray(pr.requested_reviewers)) {
+      pr.requested_reviewers.forEach((reviewer) => {
+        const login = reviewer.login;
+        if (!personStatsMap.has(login)) {
+          personStatsMap.set(login, {
+            login,
+            name: reviewer.login,
+            avatarUrl: reviewer.avatar_url,
+            open: 0,
+            draft: 0,
+            assignedForReview: 0,
+          });
+        }
+        personStatsMap.get(login)!.assignedForReview++;
+      });
     }
 
     // Count reviewers who have reviewed this PR (approved or changes requested)
@@ -99,10 +161,17 @@ function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): Curre
     }
   });
 
+  // Convert to array and sort by most open
+  const personStats = Array.from(personStatsMap.values()).sort(
+    (a, b) => b.open - a.open
+  );
+
   return {
     totalOpen,
     totalDraft,
+    readyToShip,
     reviewedByPerson,
+    personStats,
   };
 }
 
