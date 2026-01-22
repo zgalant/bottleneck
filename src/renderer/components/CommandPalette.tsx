@@ -462,8 +462,20 @@ export default function CommandPalette() {
            setIsURLMode(false);
          },
          preview: <div>Open this pull request on Graphite</div>,
-       },
-       ...testing.map((url, idx) => {
+         },
+         {
+         id: "url-mode-pr-devinreview",
+         name: "Open PR on DevinReview",
+         keywords: "devin devinreview review open browser external link ai",
+         section: "PR",
+         icon: ExternalLink,
+         action: () => {
+           window.open(`https://devinreview.com/${prForURLs.base.repo.owner.login}/${prForURLs.base.repo.name}/pull/${prForURLs.number}`, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div>Open this pull request on DevinReview</div>,
+         },
+         ...testing.map((url, idx) => {
          const urlLower = url.url.toLowerCase();
          const icon = (urlLower.includes('localhost') || urlLower.includes('.dev.codehs.com')) ? Laptop : Zap;
 
