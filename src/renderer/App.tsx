@@ -9,6 +9,7 @@ import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import RightPanel from "./components/RightPanel";
 import CommandPalette from "./components/CommandPalette";
+import PRPalette from "./components/PRPalette";
 import { KeyboardShortcutsModal } from "./components/KeyboardShortcutsModal";
 import { setupKeyboardShortcuts } from "./utils/keyboard";
 import { cn } from "./utils/cn";
@@ -290,6 +291,8 @@ function App() {
       </div>
       {/* Command Palette Overlay */}
       <CommandPalette />
+      {/* PR Palette Overlay */}
+      <PRPalette />
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={keyboardShortcutsOpen}

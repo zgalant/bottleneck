@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw } from "lucide-react";
+import { Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePRStore } from "../stores/prStore";
 import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
-import { getPRIcon, getPRColorClass } from "../utils/prStatus";
+
 import { extractAllURLsFromPR } from "../utils/urlParser";
 
 interface Command {
@@ -18,22 +18,6 @@ interface Command {
   action: () => void;
   preview?: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
-}
-
-function formatRelativeTime(date: string): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 const commands: Command[] = [
@@ -192,11 +176,22 @@ const commands: Command[] = [
     action: () => useUIStore.getState().toggleKeyboardShortcuts(),
     preview: <div>Display keyboard shortcuts help</div>,
   },
+  {
+    id: "open-pr-palette",
+    name: "Go to Pull Request",
+    keywords: "navigate pr pull request search find",
+    shortcut: "⌘P",
+    action: () => {
+      useUIStore.getState().toggleCommandPalette();
+      setTimeout(() => useUIStore.getState().togglePRPalette(), 50);
+    },
+    preview: <div>Open PR navigation palette</div>,
+  },
 ];
 
 export default function CommandPalette() {
    const { commandPaletteOpen, toggleCommandPalette, currentPage } = useUIStore();
-   const { pullRequests, repositories, setSelectedRepo } = usePRStore();
+   const { repositories, setSelectedRepo } = usePRStore();
    const { favorites, loadFavorites } = useRepoFavoritesStore();
    const navigate = useNavigate();
    const location = useLocation();
@@ -317,6 +312,20 @@ export default function CommandPalette() {
         },
         preview: <div>Refresh this PR's data from GitHub</div>,
       });
+      cmds.push({
+        id: "open-urls-palette",
+        name: "Open URLs",
+        keywords: "urls links open external browse",
+        shortcut: "⌘O",
+        icon: ExternalLink,
+        action: () => {
+          useUIStore.getState().toggleCommandPalette();
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("pr-action:open-urls"));
+          }, 50);
+        },
+        preview: <div>Open URLs palette for this PR</div>,
+      });
     }
 
     // Add starred repository commands
@@ -357,57 +366,7 @@ export default function CommandPalette() {
     return cmds;
   }, [location.pathname, repositories, favorites, navigate, currentPage]);
 
-  // Create a lookup map for quick PR access by command ID
-  const prLookupMap = useMemo(() => {
-    const map = new Map<string, any>();
-    Array.from(pullRequests.values()).forEach((pr) => {
-      map.set(`pr-${pr.id}`, pr);
-    });
-    return map;
-  }, [pullRequests]);
 
-  // Generate PR search commands
-  const prCommands = useMemo(() => {
-    return Array.from(pullRequests.values())
-      .filter((pr) => pr.state === "open")
-      .map((pr) => ({
-      id: `pr-${pr.id}`,
-      name: `#${pr.number} ${pr.title}`,
-      keywords: `${pr.number} ${pr.title} ${pr.user.login} ${pr.base.repo.owner.login} ${pr.base.repo.name}`,
-      section: "Pull Requests",
-      action: () => {
-        navigate(`/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`, {
-          state: { activeTab: "conversation" }
-        });
-      },
-      preview: (
-        <div className="text-xs">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className={cn("flex-shrink-0", getPRColorClass(pr))}>
-              {(() => {
-                const Icon = getPRIcon(pr);
-                if (Icon === GitPullRequest) {
-                  return <GitPullRequest className="w-4 h-4" />;
-                }
-                return <Icon className="w-4 h-4" />;
-              })()}
-            </span>
-            <span className="font-medium">{pr.base.repo.owner.login}/{pr.base.repo.name}</span>
-          </div>
-          <div className="flex items-center space-x-2 text-gray-400">
-            <img
-              src={pr.user.avatar_url}
-              alt={pr.user.login}
-              className="w-3 h-3 rounded-full"
-            />
-            <span>{pr.user.login}</span>
-            <span>→</span>
-            <span>{pr.base.ref}</span>
-          </div>
-        </div>
-      ),
-    })) as Command[];
-  }, [pullRequests, navigate]);
 
   // Generate URL commands when in URL mode
    const urlCommands = useMemo(() => {
@@ -555,8 +514,8 @@ export default function CommandPalette() {
     if (isURLMode) {
       return urlCommands;
     }
-    return [...contextualCommands, ...commands, ...prCommands];
-  }, [contextualCommands, prCommands, isURLMode, urlCommands]);
+    return [...contextualCommands, ...commands];
+  }, [contextualCommands, isURLMode, urlCommands]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return allCommands;
@@ -696,8 +655,6 @@ export default function CommandPalette() {
               </li>
               {groupedCommands[section].map((cmd) => {
                 const globalIdx = flattenedForIndex.indexOf(cmd);
-                const isPR = cmd.id.startsWith("pr-");
-                const pr = isPR ? prLookupMap.get(cmd.id) : null;
 
                 return (
                   <li
@@ -708,48 +665,20 @@ export default function CommandPalette() {
                       toggleCommandPalette();
                     }}
                     className={cn(
-                      "flex items-center justify-between px-4 py-3 cursor-pointer",
-                      isPR ? "text-sm" : "text-sm",
+                      "flex items-center justify-between px-4 py-3 cursor-pointer text-sm",
                       globalIdx === selectedIndex
                         ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white"
                         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
                     )}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                       {isPR && pr && (
-                         <>
-                           <img
-                             src={pr.user.avatar_url}
-                             alt={pr.user.login}
-                             className="w-5 h-5 rounded-full flex-shrink-0"
-                             title={pr.user.login}
-                           />
-                           <span className={cn("flex-shrink-0", getPRColorClass(pr))}>
-                             {pr.draft ? (
-                               <GitPullRequestDraft className="w-4 h-4" />
-                             ) : (
-                               <GitPullRequest className="w-4 h-4" />
-                             )}
-                           </span>
-                         </>
-                       )}
-                       {cmd.icon && !isPR && (
+                       {cmd.icon && (
                          <span className="flex-shrink-0 text-gray-600 dark:text-gray-400">
                            {React.createElement(cmd.icon, { className: "w-4 h-4" })}
                          </span>
                        )}
                        <div className="flex-1 min-w-0">
                          <span className="truncate block">{cmd.name}</span>
-                         {isPR && pr && (
-                           <span className={cn(
-                             "text-xs truncate block",
-                             globalIdx === selectedIndex
-                               ? "text-gray-600 dark:text-gray-400"
-                               : "text-gray-500 dark:text-gray-500"
-                           )}>
-                             {formatRelativeTime(pr.updated_at)}
-                           </span>
-                         )}
                        </div>
                      </div>
                     {cmd.shortcut && <span className="opacity-60 ml-2 flex-shrink-0">{cmd.shortcut}</span>}

@@ -32,10 +32,10 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
-      // Open command palette (Cmd/Ctrl + Shift + P)
-      if ((e.key === "p" || e.key === "P") && e.shiftKey) {
+      // Open PR palette (Cmd/Ctrl + P)
+      if ((e.key === "p" || e.key === "P") && !e.shiftKey) {
         e.preventDefault();
-        toggleCommandPalette();
+        useUIStore.getState().togglePRPalette();
         return;
       }
 
@@ -151,6 +151,10 @@ export function setupKeyboardShortcuts() {
     useUIStore.getState().toggleCommandPalette();
   };
 
+  const handleOpenPRPalette = () => {
+    useUIStore.getState().togglePRPalette();
+  };
+
   const handleShowShortcuts = () => {
     useUIStore.getState().toggleKeyboardShortcuts();
   };
@@ -165,6 +169,7 @@ export function setupKeyboardShortcuts() {
   window.electron.on("toggle-sidebar", handleToggleSidebar);
   window.electron.on("toggle-right-panel", handleToggleRightPanel);
   window.electron.on("open-command-palette", handleOpenCommandPalette);
+  window.electron.on("open-pr-palette", handleOpenPRPalette);
   window.electron.on("show-shortcuts", handleShowShortcuts);
   window.electron.on("add-label", handleAddLabel);
 
@@ -173,6 +178,7 @@ export function setupKeyboardShortcuts() {
     window.electron.off("toggle-sidebar", handleToggleSidebar);
     window.electron.off("toggle-right-panel", handleToggleRightPanel);
     window.electron.off("open-command-palette", handleOpenCommandPalette);
+    window.electron.off("open-pr-palette", handleOpenPRPalette);
     window.electron.off("show-shortcuts", handleShowShortcuts);
     window.electron.off("add-label", handleAddLabel);
   };

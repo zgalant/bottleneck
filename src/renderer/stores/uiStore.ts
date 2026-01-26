@@ -10,6 +10,7 @@ interface UIState {
   sidebarWidth: number;
   rightPanelOpen: boolean;
   commandPaletteOpen: boolean;
+  prPaletteOpen: boolean;
   keyboardShortcutsOpen: boolean;
   addReviewersDialogOpen: boolean;
   addLabelDialogOpen: boolean;
@@ -40,6 +41,7 @@ interface UIState {
   setSidebarWidth: (width: number) => void;
   toggleRightPanel: () => void;
   toggleCommandPalette: () => void;
+  togglePRPalette: () => void;
   toggleKeyboardShortcuts: () => void;
   toggleAddReviewersDialog: () => void;
   setAddReviewersDialogOpen: (open: boolean) => void;
@@ -74,6 +76,7 @@ export const useUIStore = create<UIState>()(
       sidebarWidth: 200, // 200px minimum width
       rightPanelOpen: false,
       commandPaletteOpen: false,
+      prPaletteOpen: false,
       keyboardShortcutsOpen: false,
       addReviewersDialogOpen: false,
       addLabelDialogOpen: false,
@@ -99,6 +102,8 @@ export const useUIStore = create<UIState>()(
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
       toggleCommandPalette: () =>
         set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
+      togglePRPalette: () =>
+        set((state) => ({ prPaletteOpen: !state.prPaletteOpen })),
       toggleKeyboardShortcuts: () =>
         set((state) => ({
           keyboardShortcutsOpen: !state.keyboardShortcutsOpen,

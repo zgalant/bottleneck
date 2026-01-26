@@ -139,7 +139,7 @@ export function createMenu(mainWindow: BrowserWindow): Menu {
           label: "Go to PR",
           accelerator: "CmdOrCtrl+P",
           click: () => {
-            mainWindow.webContents.send("go-to-pr");
+            mainWindow.webContents.send("open-pr-palette");
           },
         },
         {

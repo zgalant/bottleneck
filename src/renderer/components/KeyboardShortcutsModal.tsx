@@ -24,8 +24,8 @@ const SHORTCUTS = [
   {
     category: "Search & Command",
     shortcuts: [
-      { keys: ["Cmd", "K"], description: "Open command palette" },
-      { keys: ["Cmd", "Shift", "P"], description: "Open command palette" },
+      { keys: ["Cmd", "K"], description: "Open command palette (actions)" },
+      { keys: ["Cmd", "P"], description: "Open PR palette (navigation)" },
       { keys: ["Cmd", "O"], description: "Open URLs palette (on PR detail)" },
     ],
   },
