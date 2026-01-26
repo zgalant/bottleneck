@@ -657,6 +657,12 @@ export default function PRDetailView() {
         loadPRData({ background: true }),
         useLabelStore.getState().fetchLabels(owner, repo, true),
       ]);
+      // Update the PR with the resync timestamp
+      if (pr) {
+        const updatedPR = { ...pr, lastResyncedAt: Date.now() };
+        setPR(updatedPR);
+        usePRStore.getState().updatePR(updatedPR);
+      }
     } finally {
       setIsResyncing(false);
     }
@@ -1036,6 +1042,7 @@ export default function PRDetailView() {
         isTogglingDraft={pr.isTogglingDraft || false}
         onResync={handleResync}
         isResyncing={isResyncing}
+        lastResyncedAt={pr.lastResyncedAt}
       />
 
       {/* Tabs */}

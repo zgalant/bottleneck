@@ -38,6 +38,7 @@ interface PRHeaderProps {
   isTogglingDraft?: boolean;
   onResync?: () => void;
   isResyncing?: boolean;
+  lastResyncedAt?: number;
 }
 
 export function PRHeader({
@@ -53,6 +54,7 @@ export function PRHeader({
   isTogglingDraft,
   onResync,
   isResyncing,
+  lastResyncedAt,
 }: PRHeaderProps) {
   const navigate = useNavigate();
   const [showCheckoutDropdown, setShowCheckoutDropdown] = useState(false);
@@ -64,6 +66,18 @@ export function PRHeader({
   const hasRequestedChanges =
     currentUser &&
     pr.changesRequestedBy?.some((r) => r.login === currentUser.login);
+
+  const formatLastResync = (timestamp: number | undefined): string => {
+    if (!timestamp) return "Never resynced";
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Last resynced: Just now";
+    if (minutes < 60) return `Last resynced: ${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Last resynced: ${hours}h ago`;
+    return `Last resynced: ${Math.floor(hours / 24)}d ago`;
+  };
 
   return (
     <div
@@ -155,7 +169,7 @@ export function PRHeader({
               onClick={onResync}
               disabled={isResyncing}
               className="btn btn-secondary text-xs flex items-center"
-              title="Resync this PR"
+              title={formatLastResync(lastResyncedAt)}
             >
               <RefreshCw className={cn("w-3 h-3 mr-1", isResyncing && "animate-spin")} />
               {isResyncing ? "Syncing..." : "Resync"}

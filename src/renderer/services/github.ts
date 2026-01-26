@@ -71,6 +71,8 @@ export interface PullRequest {
   // Loading state flags for mutations
   isTogglingDraft?: boolean;
   // Future: isUpdatingState?, isUpdatingAssignees?, etc.
+  // Timestamp of when the PR was last resynced (via the Resync button)
+  lastResyncedAt?: number;
 }
 
 export interface Repository {
