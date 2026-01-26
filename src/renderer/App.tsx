@@ -111,6 +111,20 @@ function App() {
     };
   }, []);
 
+  // Check if current time is during Central Time weekday daytime hours (9am-6pm CT, Mon-Fri)
+  const isCentralTimeDaytime = (): boolean => {
+    const now = new Date();
+    // Get current time in Central Time
+    const centralTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Chicago" }));
+    const hour = centralTime.getHours();
+    const day = centralTime.getDay(); // 0 = Sunday, 6 = Saturday
+    
+    const isWeekday = day >= 1 && day <= 5;
+    const isDaytime = hour >= 9 && hour < 18; // 9am to 6pm
+    
+    return isWeekday && isDaytime;
+  };
+
   // Fetch repositories when authenticated and trigger initial sync if needed
   useEffect(() => {
     if (isAuthenticated && token) {
@@ -140,6 +154,39 @@ function App() {
         }
       });
     }
+  }, [isAuthenticated, token]);
+
+  // Periodic sync: every 5 minutes during Central Time weekday daytime, otherwise use settings interval
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
+    const runPeriodicSync = () => {
+      const syncStore = useSyncStore.getState();
+      if (!syncStore.isSyncing) {
+        console.log(`[App] Periodic sync triggered`);
+        syncStore.syncAll();
+      }
+    };
+
+    // Check and sync every minute, but only if enough time has passed
+    const checkInterval = setInterval(() => {
+      const syncStore = useSyncStore.getState();
+      const lastSync = syncStore.lastSyncTime;
+      const now = new Date();
+      
+      // During CT weekday daytime: sync every 5 minutes
+      // Otherwise: use the syncInterval from settings (or default 5 min)
+      const settings = useSettingsStore.getState();
+      const intervalMs = isCentralTimeDaytime() 
+        ? 5 * 60 * 1000  // 5 minutes during CT daytime
+        : (settings.syncInterval || 5) * 60 * 1000;
+      
+      if (!lastSync || now.getTime() - lastSync.getTime() >= intervalMs) {
+        runPeriodicSync();
+      }
+    }, 60 * 1000); // Check every minute
+
+    return () => clearInterval(checkInterval);
   }, [isAuthenticated, token]);
 
   // Loading component for lazy-loaded views
