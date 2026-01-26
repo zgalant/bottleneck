@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Settings,
   Bell,
@@ -21,6 +22,7 @@ import {
   X,
   UserPlus,
   UserMinus,
+  Heart,
 } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -28,6 +30,7 @@ import { useUIStore } from "../stores/uiStore";
 import TeamManagementDialog from "../components/TeamManagementDialog";
 import { RepoFavoritesSection } from "../components/settings/RepoFavoritesSection";
 import PeopleTab from "../components/settings/PeopleTab";
+import FollowingTab from "../components/settings/FollowingTab";
 import OrganizationsTab from "../components/settings/OrganizationsTab";
 import { cn } from "../utils/cn";
 
@@ -48,9 +51,16 @@ export default function SettingsView() {
     removeMemberFromTeam,
   } = useSettingsStore();
   const { theme } = useUIStore();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<
-    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories" | "people" | "organizations"
-  >("general");
+    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories" | "people" | "organizations" | "following"
+  >(() => {
+    const state = location.state as { openTab?: string } | null;
+    if (state?.openTab === "following") {
+      return "following";
+    }
+    return "general";
+  });
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showTeamDialog, setShowTeamDialog] = useState(false);
@@ -225,6 +235,7 @@ export default function SettingsView() {
     { id: "repositories", label: "Repositories", icon: Star },
     { id: "organizations", label: "Organizations", icon: Users },
     { id: "people", label: "People", icon: Users },
+    { id: "following", label: "Following", icon: Heart },
     { id: "teams", label: "Teams", icon: Users },
     { id: "advanced", label: "Advanced", icon: Code },
   ];
@@ -956,6 +967,10 @@ export default function SettingsView() {
 
           {activeTab === "people" && (
             <PeopleTab />
+          )}
+
+          {activeTab === "following" && (
+            <FollowingTab />
           )}
 
           {activeTab === "teams" && (

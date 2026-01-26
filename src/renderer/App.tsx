@@ -29,6 +29,7 @@ const CursorView = lazy(() => import("./views/CursorView"));
 const DevinView = lazy(() => import("./views/DevinView"));
 const ChatGPTView = lazy(() => import("./views/ChatGPTView"));
 const ShipyardView = lazy(() => import("./views/ShipyardView"));
+const FollowingView = lazy(() => import("./views/FollowingView"));
 
 PerfLogger.mark("App.tsx module loaded");
 
@@ -221,6 +222,7 @@ function App() {
               <Route path="/stats" element={<StatsView />} />
               <Route path="/feed" element={<FeedView />} />
               <Route path="/me" element={<MeView />} />
+              <Route path="/following" element={<FollowingView />} />
               <Route path="/settings" element={<SettingsView />} />
               <Route path="/agents/cursor" element={<CursorView />} />
                <Route path="/agents/devin" element={<DevinView />} />
