@@ -5,9 +5,28 @@ import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
 import { useAuthStore } from "../stores/authStore";
 import { cn } from "../utils/cn";
-import type { PullRequest } from "../services/github";
+import type { PullRequest, File } from "../services/github";
+import { GitHubAPI } from "../services/github";
 
 const MIGRATION_LABEL = "change: migration";
+
+interface MigrationFile {
+  app: string;
+  filename: string;
+  fullPath: string;
+}
+
+function parseMigrationPath(filename: string): MigrationFile | null {
+  const match = filename.match(/([^/]+)\/migrations\/(\d{4}_[^/]+\.py)$/);
+  if (match) {
+    return {
+      app: match[1],
+      filename: match[2],
+      fullPath: filename,
+    };
+  }
+  return null;
+}
 
 export default function MigrationsView() {
   const navigate = useNavigate();
@@ -15,6 +34,7 @@ export default function MigrationsView() {
   const { theme } = useUIStore();
   const { token } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [prFiles, setPRFiles] = useState<Map<string, MigrationFile[]>>(new Map());
 
   // Fetch PRs if needed
   useEffect(() => {
@@ -49,6 +69,72 @@ export default function MigrationsView() {
       })
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   }, [pullRequests, searchQuery]);
+
+  // Fetch files for migration PRs to find migration file paths
+  useEffect(() => {
+    if (!token || migrationPRs.length === 0) return;
+    
+    const fetchFilesForMigrationPRs = async () => {
+      const api = new GitHubAPI(token);
+      const newPRFiles = new Map<string, MigrationFile[]>(prFiles);
+      let hasNewData = false;
+      
+      for (const pr of migrationPRs) {
+        const prKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+        if (prFiles.has(prKey)) continue;
+        
+        hasNewData = true;
+        try {
+          const files = await api.getPullRequestFiles(
+            pr.base.repo.owner.login,
+            pr.base.repo.name,
+            pr.number
+          );
+          const migrations = files
+            .map(f => parseMigrationPath(f.filename))
+            .filter((m): m is MigrationFile => m !== null);
+          newPRFiles.set(prKey, migrations);
+        } catch (e) {
+          console.error(`Failed to fetch files for PR ${prKey}:`, e);
+          newPRFiles.set(prKey, []);
+        }
+      }
+      
+      if (hasNewData) {
+        setPRFiles(newPRFiles);
+      }
+    };
+    
+    fetchFilesForMigrationPRs();
+  }, [token, migrationPRs]);
+
+  // Find conflicting migrations (same app + same number prefix)
+  const conflictingMigrations = useMemo(() => {
+    const migrationsByAppAndNumber = new Map<string, string[]>();
+    
+    prFiles.forEach((migrations, prKey) => {
+      migrations.forEach(m => {
+        const numberMatch = m.filename.match(/^(\d{4})_/);
+        if (numberMatch) {
+          const key = `${m.app}:${numberMatch[1]}`;
+          const existing = migrationsByAppAndNumber.get(key) || [];
+          if (!existing.includes(prKey)) {
+            existing.push(prKey);
+          }
+          migrationsByAppAndNumber.set(key, existing);
+        }
+      });
+    });
+    
+    const conflicts = new Set<string>();
+    migrationsByAppAndNumber.forEach((prKeys) => {
+      if (prKeys.length > 1) {
+        prKeys.forEach(k => conflicts.add(k));
+      }
+    });
+    
+    return conflicts;
+  }, [prFiles]);
 
   const handlePRClick = (pr: PullRequest) => {
     navigate(
@@ -172,12 +258,17 @@ export default function MigrationsView() {
             borderColor: theme === "dark" ? "#374151" : "#e5e7eb",
           }}>
             {migrationPRs.map((pr) => {
+              const prKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+              const migrations = prFiles.get(prKey) || [];
+              const hasConflict = conflictingMigrations.has(prKey);
+              
               return (
                 <div
-                  key={`${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`}
+                  key={prKey}
                   onClick={() => handlePRClick(pr)}
                   className={cn(
                     "px-6 py-3 cursor-pointer transition",
+                    hasConflict && (theme === "dark" ? "bg-red-900/20" : "bg-red-50"),
                     theme === "dark"
                       ? "hover:bg-gray-800"
                       : "hover:bg-gray-50"
@@ -196,8 +287,33 @@ export default function MigrationsView() {
                         <span>#{pr.number}</span>
                         <span>by {pr.user.login}</span>
                       </div>
+                      {migrations.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {migrations.map((m, idx) => (
+                            <span
+                              key={idx}
+                              className={cn(
+                                "inline-flex items-center px-2 py-0.5 rounded text-xs font-mono",
+                                hasConflict
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                                  : theme === "dark"
+                                    ? "bg-gray-700 text-gray-300"
+                                    : "bg-gray-200 text-gray-700"
+                              )}
+                              title={m.fullPath}
+                            >
+                              {m.app}/{m.filename}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {hasConflict && (
+                        <span className="inline-block px-2 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                          conflict
+                        </span>
+                      )}
                       <span className="inline-block px-2 py-1 text-xs font-medium rounded-md bg-orange-100 text-orange-700">
                         migration
                       </span>
