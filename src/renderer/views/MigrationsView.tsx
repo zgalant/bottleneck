@@ -1,12 +1,13 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { GitPullRequest, Database, ExternalLink } from "lucide-react";
+import { GitPullRequest, Database, ExternalLink, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
 import { useAuthStore } from "../stores/authStore";
 import { cn } from "../utils/cn";
 import type { PullRequest, File } from "../services/github";
 import { GitHubAPI } from "../services/github";
+import { getLabelColors } from "../utils/labelColors";
 
 const MIGRATION_LABEL = "change: migration";
 
@@ -309,14 +310,62 @@ export default function MigrationsView() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Review status */}
+                      {pr.state === "open" && !pr.merged_at && pr.approvalStatus && (
+                        <>
+                          {pr.approvalStatus === "approved" ? (
+                            <div className="flex items-center px-1.5 py-0.5 bg-green-500/20 text-green-500 rounded" title="Approved">
+                              <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                              <span className="text-[10px] leading-tight">
+                                Approved{pr.approvedBy && pr.approvedBy.length > 0 && ` (${pr.approvedBy.length})`}
+                              </span>
+                            </div>
+                          ) : pr.approvalStatus === "changes_requested" ? (
+                            <div className="flex items-center px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded" title="Changes requested">
+                              <XCircle className="w-3 h-3 mr-0.5" />
+                              <span className="text-[10px] leading-tight">Changes</span>
+                            </div>
+                          ) : pr.approvalStatus === "pending" ? (
+                            <div className="flex items-center px-1.5 py-0.5 bg-yellow-500/20 text-yellow-500 rounded" title="Review pending">
+                              <Clock className="w-3 h-3 mr-0.5" />
+                              <span className="text-[10px] leading-tight">Pending</span>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
+
+                      {/* Labels (excluding migration label) */}
+                      {pr.labels && pr.labels.filter(l => l.name !== MIGRATION_LABEL).length > 0 && (
+                        <div className="flex items-center gap-1">
+                          {pr.labels.filter(l => l.name !== MIGRATION_LABEL).slice(0, 2).map((label) => {
+                            const labelColors = getLabelColors(label.color, theme);
+                            return (
+                              <span
+                                key={label.name}
+                                className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                style={{
+                                  backgroundColor: labelColors.backgroundColor,
+                                  color: labelColors.color,
+                                }}
+                                title={label.name}
+                              >
+                                {label.name.length > 12 ? `${label.name.slice(0, 12)}…` : label.name}
+                              </span>
+                            );
+                          })}
+                          {pr.labels.filter(l => l.name !== MIGRATION_LABEL).length > 2 && (
+                            <span className={cn("text-[10px]", theme === "dark" ? "text-gray-500" : "text-gray-400")}>
+                              +{pr.labels.filter(l => l.name !== MIGRATION_LABEL).length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {hasConflict && (
                         <span className="inline-block px-2 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
                           conflict
                         </span>
                       )}
-                      <span className="inline-block px-2 py-1 text-xs font-medium rounded-md bg-orange-100 text-orange-700">
-                        migration
-                      </span>
                       <span className="text-xs" style={{
                         color: theme === "dark" ? "#9ca3af" : "#6b7280",
                       }}>
