@@ -66,6 +66,7 @@ interface UIState {
   
   // PR action dispatchers - these emit events that PRDetailView listens to
   triggerApprovePR: () => void;
+  triggerClosePR: () => void;
   triggerFocusCommentBox: () => void;
 }
 
@@ -172,6 +173,9 @@ export const useUIStore = create<UIState>()(
       
       triggerApprovePR: () => {
         window.dispatchEvent(new CustomEvent("pr-action:approve"));
+      },
+      triggerClosePR: () => {
+        window.dispatchEvent(new CustomEvent("pr-action:close"));
       },
       triggerFocusCommentBox: () => {
         window.dispatchEvent(new CustomEvent("pr-action:focus-comment"));

@@ -108,6 +108,10 @@ export default function PRDetailView() {
       // Trigger the approve handler - need to access it via ref pattern since it depends on state
       window.dispatchEvent(new CustomEvent("pr-internal:do-approve"));
     };
+    const onClose = () => {
+      // Trigger the close handler - need to access it via ref pattern since it depends on state
+      window.dispatchEvent(new CustomEvent("pr-internal:do-close"));
+    };
     const onFocusComment = () => {
       setActiveTab("conversation");
       // Use setTimeout to ensure the tab switch completes before focusing
@@ -192,6 +196,7 @@ export default function PRDetailView() {
     };
 
     window.addEventListener("pr-action:approve", onApprove);
+    window.addEventListener("pr-action:close", onClose);
     window.addEventListener("pr-action:focus-comment", onFocusComment);
     window.addEventListener("pr-action:open-urls", onOpenURLs);
     window.addEventListener("pr-action:navigate-previous", onNavigatePrevious);
@@ -201,6 +206,7 @@ export default function PRDetailView() {
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
+      window.removeEventListener("pr-action:close", onClose);
       window.removeEventListener("pr-action:focus-comment", onFocusComment);
       window.removeEventListener("pr-action:open-urls", onOpenURLs);
       window.removeEventListener("pr-action:navigate-previous", onNavigatePrevious);
@@ -801,6 +807,48 @@ export default function PRDetailView() {
       window.removeEventListener("pr-internal:do-approve", doApprove);
     };
   }, [pr, token, owner, repo, currentUser]);
+
+  const handleClosePR = async () => {
+    if (!pr || !token || !owner || !repo) return;
+    if (pr.state === "closed") {
+      console.log("PR is already closed");
+      return;
+    }
+
+    // Optimistically update the PR state
+    const closedPR = {
+      ...pr,
+      state: "closed" as const,
+    };
+    setPR(closedPR);
+    updatePR(closedPR);
+
+    try {
+      const api = new GitHubAPI(token);
+      await api.closePullRequest(owner, repo, pr.number);
+      console.log("PR closed successfully");
+      
+      // Reload PR data to get the actual server state
+      await loadPRData({ background: true });
+    } catch (error) {
+      console.error("Failed to close PR:", error);
+      // Revert the optimistic update on error
+      setPR(pr);
+      updatePR(pr);
+      alert("Failed to close pull request. Please try again.");
+    }
+  };
+
+  // Listen for internal close event triggered by command palette
+  useEffect(() => {
+    const doClose = () => {
+      handleClosePR();
+    };
+    window.addEventListener("pr-internal:do-close", doClose);
+    return () => {
+      window.removeEventListener("pr-internal:do-close", doClose);
+    };
+  }, [pr, token, owner, repo]);
 
   const handleRequestChanges = async () => {
     if (!pr || !token || !owner || !repo) return;

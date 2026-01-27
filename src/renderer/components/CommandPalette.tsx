@@ -251,6 +251,15 @@ export default function CommandPalette() {
         preview: <div>Approve this pull request</div>,
       });
       cmds.push({
+        id: "close-pr",
+        name: "Close PR",
+        keywords: "close pr pull request",
+        action: () => {
+          useUIStore.getState().triggerClosePR();
+        },
+        preview: <div>Close this pull request without merging</div>,
+      });
+      cmds.push({
         id: "add-reviewers",
         name: "Add Reviewers",
         keywords: "reviewers add request review",
