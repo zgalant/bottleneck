@@ -169,6 +169,16 @@ const commands: Command[] = [
     preview: <div>View PRs ready to ship (approved or labeled "shipit")</div>,
   },
   {
+    id: "nav-migrations",
+    name: "Go to Migrations",
+    keywords: "navigate migrations database schema change migration",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/migrations");
+    },
+    preview: <div>View PRs labeled "change: migration"</div>,
+  },
+  {
     id: "show-shortcuts",
     name: "Show Keyboard Shortcuts",
     keywords: "help shortcuts",
