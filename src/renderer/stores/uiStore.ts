@@ -82,7 +82,7 @@ export const useUIStore = create<UIState>()(
       addLabelDialogOpen: false,
       selectedPRs: new Set(),
       activeView: "list",
-      diffView: "split",
+      diffView: "unified",
       showWhitespace: false,
       wordWrap: false,
       theme: "dark",

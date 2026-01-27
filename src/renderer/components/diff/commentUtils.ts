@@ -174,6 +174,16 @@ export const getLanguageFromFilename = (filename: string) => {
   return LANGUAGE_MAP[ext || ""] || "plaintext";
 };
 
+/**
+ * Filter blank lines from deletions entirely.
+ * Removes all blank deleted lines to reduce visual noise in the diff view.
+ */
+function filterBlankDeletedLines(
+  lines: Array<{ content: string; lineNumber: number; diffPos: number }>
+): Array<{ content: string; lineNumber: number; diffPos: number }> {
+  return lines.filter(line => line.content.trim() !== "");
+}
+
 export function parsePatch(patch: string): ParsedPatch {
   if (!patch || patch.trim() === "") {
     return { original: "", modified: "", mappings: null };
@@ -261,9 +271,12 @@ export function parsePatch(patch: string): ParsedPatch {
         i++;
       }
 
-      const maxLines = Math.max(deletions.length, additions.length);
+      // Filter out all blank deleted lines to reduce visual noise
+      const filteredDeletions = filterBlankDeletedLines(deletions);
+
+      const maxLines = Math.max(filteredDeletions.length, additions.length);
       for (let j = 0; j < maxLines; j++) {
-        const deletion = deletions[j];
+        const deletion = filteredDeletions[j];
         const addition = additions[j];
         originalLines.push(deletion ? deletion.content : "");
         modifiedLines.push(addition ? addition.content : "");
