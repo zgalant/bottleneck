@@ -13,6 +13,7 @@ export interface Activity {
   // PR activity
   prNumber?: number;
   prTitle?: string;
+  prBody?: string | null;
   author?: {
     login: string;
     avatar_url: string;
@@ -130,6 +131,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
         repoOwner: pr.base.repo.owner.login,
         prNumber: pr.number,
         prTitle: pr.title,
+        prBody: pr.body,
         author: pr.user,
       });
 
@@ -143,6 +145,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
           repoOwner: pr.base.repo.owner.login,
           prNumber: pr.number,
           prTitle: pr.title,
+          prBody: pr.body,
           author: pr.user,
         });
       }
@@ -157,6 +160,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
           repoOwner: pr.base.repo.owner.login,
           prNumber: pr.number,
           prTitle: pr.title,
+          prBody: pr.body,
           author: pr.user,
         });
       }
@@ -172,6 +176,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
             repoOwner: pr.base.repo.owner.login,
             prNumber: pr.number,
             prTitle: pr.title,
+            prBody: pr.body,
             reviewState: 'APPROVED',
             reviewer,
           });
@@ -188,6 +193,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
             repoOwner: pr.base.repo.owner.login,
             prNumber: pr.number,
             prTitle: pr.title,
+            prBody: pr.body,
             reviewState: 'CHANGES_REQUESTED',
             reviewer,
           });
@@ -204,6 +210,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
           repoOwner: pr.base.repo.owner.login,
           prNumber: pr.number,
           prTitle: pr.title,
+          prBody: pr.body,
           commentAuthor: pr.user,
           isAssignedPR: isUserAssigned,
           isCommentMention: isUserMentioned,

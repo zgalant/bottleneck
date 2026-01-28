@@ -23,6 +23,8 @@ import { cn } from "../utils/cn";
 import { getPRIcon, getPRColorClass } from "../utils/prStatus";
 import { AgentIcon } from "./AgentIcon";
 import { getLabelColors } from "../utils/labelColors";
+import { extractLinearIssues } from "../utils/linearLinks";
+import { LinearIcon } from "./icons/LinearIcon";
 import type { PullRequest } from "../services/github";
 import type { PRWithMetadata, SortByType } from "../types/prList";
 
@@ -635,6 +637,45 @@ export function PRTreeView({
                                )}
                              </div>
                            )}
+
+                          {/* Linear issues */}
+                          {(() => {
+                            const linearIssues = extractLinearIssues(item.data.pr.body);
+                            if (linearIssues.length === 0) return null;
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                {linearIssues.slice(0, 2).map((issue) => (
+                                  <a
+                                    key={issue.id}
+                                    href={issue.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={cn(
+                                      "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-colors",
+                                      theme === "dark"
+                                        ? "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30"
+                                        : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                                    )}
+                                    title={`Open ${issue.id} in Linear`}
+                                  >
+                                    <LinearIcon className="w-3 h-3" />
+                                    <span>{issue.id}</span>
+                                  </a>
+                                ))}
+                                {linearIssues.length > 2 && (
+                                  <span
+                                    className={cn(
+                                      "text-xs",
+                                      theme === "dark" ? "text-gray-500" : "text-gray-400"
+                                    )}
+                                  >
+                                    +{linearIssues.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

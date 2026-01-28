@@ -2,6 +2,8 @@ import { useUIStore } from "../../stores/uiStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "../../utils/cn";
 import { GitPullRequest, GitMerge, XCircle, MessageCircle, CheckCircle2 } from "lucide-react";
+import { extractLinearIssues } from "../../utils/linearLinks";
+import { LinearIcon } from "../icons/LinearIcon";
 import type { Activity } from "../../stores/activityStore";
 
 interface ActivityItemProps {
@@ -159,6 +161,45 @@ export function ActivityItem({ activity }: ActivityItemProps) {
               </span>
             </div>
           )}
+
+          {/* Linear issues */}
+          {(() => {
+            const linearIssues = extractLinearIssues(activity.prBody);
+            if (linearIssues.length === 0) return null;
+            return (
+              <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                {linearIssues.slice(0, 2).map((issue) => (
+                  <a
+                    key={issue.id}
+                    href={issue.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                      "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-colors",
+                      theme === "dark"
+                        ? "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30"
+                        : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                    )}
+                    title={`Open ${issue.id} in Linear`}
+                  >
+                    <LinearIcon className="w-3 h-3" />
+                    <span>{issue.id}</span>
+                  </a>
+                ))}
+                {linearIssues.length > 2 && (
+                  <span
+                    className={cn(
+                      "text-xs",
+                      theme === "dark" ? "text-gray-500" : "text-gray-400"
+                    )}
+                  >
+                    +{linearIssues.length - 2}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {/* User info */}
           {(activity.author || activity.reviewer || activity.commentAuthor) && (
