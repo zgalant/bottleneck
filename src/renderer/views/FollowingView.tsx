@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Users, GitPullRequest } from "lucide-react";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
@@ -45,6 +45,7 @@ const sortByUpdated = (a: PullRequest, b: PullRequest) =>
 
 export default function FollowingView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { pullRequests, selectedRepo } = usePRStore();
   const { theme } = useUIStore();
   const { getFollowedUsers } = useFollowedUsersStore();
@@ -75,9 +76,11 @@ export default function FollowingView() {
 
   const handlePRClick = useCallback(
     (pr: PullRequest) => {
-      navigate(`/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`);
+      navigate(`/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`, {
+        state: { from: location.pathname }
+      });
     },
-    [navigate]
+    [navigate, location.pathname]
   );
 
   const handleGoToSettings = useCallback(() => {

@@ -114,14 +114,16 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
-      // Navigate back to PR list (Cmd/Ctrl + Left Arrow)
+      // Navigate back (Cmd/Ctrl + Left Arrow)
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         const pathMatch = window.location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
         if (pathMatch) {
-          const [, owner, repo] = pathMatch;
           const nav = (window as any).__commandNavigate;
-          if (nav) nav(`/pulls/${owner}/${repo}`);
+          // Use the 'from' state if available, otherwise fall back to /pulls
+          const historyState = window.history.state?.usr;
+          const backPath = historyState?.from || "/pulls";
+          if (nav) nav(backPath);
         }
         return;
       }

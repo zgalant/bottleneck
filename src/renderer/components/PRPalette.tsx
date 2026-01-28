@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Search, X, GitPullRequest, GitPullRequestDraft } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { usePRStore } from "../stores/prStore";
 import { getPRColorClass } from "../utils/prStatus";
 
@@ -34,6 +34,7 @@ export default function PRPalette() {
   const { prPaletteOpen, togglePRPalette } = useUIStore();
   const { pullRequests } = usePRStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -48,11 +49,11 @@ export default function PRPalette() {
         pr,
         action: () => {
           navigate(`/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`, {
-            state: { activeTab: "conversation" }
+            state: { activeTab: "conversation", from: location.pathname }
           });
         },
       })) as PRItem[];
-  }, [pullRequests, navigate]);
+  }, [pullRequests, navigate, location.pathname]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return prItems;

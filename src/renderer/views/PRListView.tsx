@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { GitPullRequest, Users, Plus } from "lucide-react";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
@@ -32,6 +32,7 @@ const statusOptions = [
 
 export default function PRListView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     pullRequests,
     loading,
@@ -449,10 +450,10 @@ export default function PRListView() {
 
       navigate(
         `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`,
-        { state: navigationState },
+        { state: { ...navigationState, from: location.pathname } },
       );
     },
-    [navigate, prsWithMetadata, fetchDetailedPRsInBackground],
+    [navigate, prsWithMetadata, fetchDetailedPRsInBackground, location.pathname],
   );
 
   const handleCheckboxChange = useCallback(

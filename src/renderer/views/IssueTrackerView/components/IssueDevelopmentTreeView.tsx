@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
     GitPullRequest,
     GitPullRequestDraft,
@@ -94,6 +94,7 @@ export function IssueDevelopmentTreeView({
     repoName,
 }: IssueDevelopmentTreeViewProps) {
     const navigate = useNavigate();
+    const location = useLocation();
     const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
 
     const prs = issue.linkedPRs ?? [];
@@ -119,7 +120,7 @@ export function IssueDevelopmentTreeView({
         const prOwner = pr.repository?.owner || repoOwner;
         const prRepo = pr.repository?.name || repoName;
         navigate(`/pulls/${prOwner}/${prRepo}/${pr.number}`, {
-            state: { activeTab: "conversation" }
+            state: { activeTab: "conversation", from: location.pathname }
         });
     };
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   GitPullRequest,
@@ -57,7 +57,10 @@ export function PRHeader({
   lastResyncedAt,
 }: PRHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showCheckoutDropdown, setShowCheckoutDropdown] = useState(false);
+  
+  const backPath = (location.state as { from?: string } | null)?.from || "/pulls";
   const checkoutDropdownRef = useRef<HTMLDivElement>(null);
 
   const isAuthor = currentUser && pr.user.login === currentUser.login;
@@ -91,7 +94,7 @@ export function PRHeader({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => navigate("/pulls")}
+            onClick={() => navigate(backPath)}
             className={cn(
               "p-1 rounded transition-colors",
               theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100",

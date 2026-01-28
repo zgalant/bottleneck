@@ -1,5 +1,5 @@
 import { useUIStore } from "../../stores/uiStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "../../utils/cn";
 import { GitPullRequest, GitMerge, XCircle, MessageCircle, CheckCircle2 } from "lucide-react";
 import type { Activity } from "../../stores/activityStore";
@@ -15,11 +15,12 @@ function canNavigateToPR(activity: Activity): boolean {
 export function ActivityItem({ activity }: ActivityItemProps) {
   const { theme } = useUIStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleClick = () => {
     if (canNavigateToPR(activity)) {
       navigate(`/pulls/${activity.repoOwner}/${activity.repo}/${activity.prNumber}`, {
-        state: { activeTab: "conversation" }
+        state: { activeTab: "conversation", from: location.pathname }
       });
     }
   };

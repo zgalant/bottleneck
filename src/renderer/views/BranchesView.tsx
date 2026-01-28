@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   GitBranch,
   GitMerge,
@@ -52,6 +52,7 @@ const sortOptions: DropdownOption<SortByType>[] = [
 
 export default function BranchesView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useUIStore();
   const { selectedRepo, pullRequests } = usePRStore();
   const { token } = useAuthStore();
@@ -495,7 +496,7 @@ export default function BranchesView() {
       // If branch has a PR, navigate to PR details
       if (existingPR && selectedRepo) {
         navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`, {
-          state: { activeTab: "conversation" }
+          state: { activeTab: "conversation", from: location.pathname }
         });
       } else {
         // Otherwise, toggle selection
@@ -585,7 +586,7 @@ export default function BranchesView() {
                     e.stopPropagation();
                     if (selectedRepo) {
                       navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`, {
-                        state: { activeTab: "conversation" }
+                        state: { activeTab: "conversation", from: location.pathname }
                       });
                     }
                   }}
@@ -600,7 +601,7 @@ export default function BranchesView() {
                     e.stopPropagation();
                     if (selectedRepo) {
                       navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`, {
-                        state: { activeTab: "conversation" }
+                        state: { activeTab: "conversation", from: location.pathname }
                       });
                     }
                   }}
