@@ -38,7 +38,7 @@ export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
 
   return (
     <div className={cn(
-      "flex-1 min-w-0 rounded-lg border flex flex-col",
+      "h-full min-w-0 rounded-lg border flex flex-col",
       theme === "dark"
         ? "bg-gray-800 border-gray-700"
         : "bg-gray-50 border-gray-200"
@@ -87,7 +87,7 @@ export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
       </div>
 
       {/* Activities list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {activities.length === 0 ? (
           <div className={cn(
             "flex items-center justify-center h-32 text-sm",

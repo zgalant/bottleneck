@@ -25,7 +25,7 @@ export default function FeedView() {
   return (
     <div
       className={cn(
-        "flex-1 overflow-hidden flex flex-col",
+        "h-full overflow-hidden flex flex-col",
         theme === "dark"
           ? "bg-gray-900 text-gray-100"
           : "bg-white text-gray-900"
@@ -52,7 +52,7 @@ export default function FeedView() {
       </div>
 
       {/* Feed Column */}
-      <div className="flex-1 overflow-hidden flex gap-2 p-4">
+      <div className="flex-1 min-h-0 overflow-hidden flex gap-2 p-4">
         {!repoKey ? (
           <div className="flex items-center justify-center w-full">
             <div className={cn(
