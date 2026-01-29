@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw, Pencil } from "lucide-react";
+import {
+  Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw, Pencil,
+  PanelLeftClose, PanelRightClose, Moon, Columns, Eye, WrapText, Settings, GitPullRequest, Home,
+  GitBranch, CircleDot, User, BarChart3, Activity, Database, Flame, Keyboard, CheckCircle, XCircle,
+  MessageSquare, Copy, Star
+} from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -26,6 +31,7 @@ const commands: Command[] = [
     name: "Toggle Sidebar",
     keywords: "sidebar view layout",
     shortcut: "⌘B",
+    icon: PanelLeftClose,
     action: () => useUIStore.getState().toggleSidebar(),
     preview: <div>Show / hide sidebar</div>,
   },
@@ -34,6 +40,7 @@ const commands: Command[] = [
     name: "Toggle Right Panel",
     keywords: "panel view layout",
     shortcut: "⌘⇧B",
+    icon: PanelRightClose,
     action: () => useUIStore.getState().toggleRightPanel(),
     preview: <div>Show / hide right panel</div>,
   },
@@ -42,6 +49,7 @@ const commands: Command[] = [
     name: "Toggle Theme",
     keywords: "theme dark light appearance",
     shortcut: "⌘⇧T",
+    icon: Moon,
     action: () => useUIStore.getState().toggleTheme(),
     preview: <div>Switch between light / dark mode</div>,
   },
@@ -50,6 +58,7 @@ const commands: Command[] = [
     name: "Toggle Diff View",
     keywords: "diff unified split",
     shortcut: "⌘⇧D",
+    icon: Columns,
     action: () => useUIStore.getState().toggleDiffView(),
     preview: <div>Switch between unified / split diff</div>,
   },
@@ -58,6 +67,7 @@ const commands: Command[] = [
     name: "Toggle Whitespace",
     keywords: "diff whitespace",
     shortcut: "⌘⇧W",
+    icon: Eye,
     action: () => useUIStore.getState().toggleWhitespace(),
     preview: <div>Show / hide whitespace changes in diff</div>,
   },
@@ -66,6 +76,7 @@ const commands: Command[] = [
     name: "Toggle Word Wrap",
     keywords: "diff word wrap",
     shortcut: "⌘⇧L",
+    icon: WrapText,
     action: () => useUIStore.getState().toggleWordWrap(),
     preview: <div>Enable / disable word wrap</div>,
   },
@@ -74,6 +85,7 @@ const commands: Command[] = [
     name: "Sync Repositories",
     keywords: "sync refresh",
     shortcut: "⌘R",
+    icon: RefreshCw,
     action: () => useSyncStore.getState().syncAll(),
     preview: <div>Trigger a full sync of all repositories</div>,
   },
@@ -82,6 +94,7 @@ const commands: Command[] = [
     name: "Open Settings",
     keywords: "settings preferences",
     shortcut: "⌘,",
+    icon: Settings,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/settings");
@@ -92,6 +105,7 @@ const commands: Command[] = [
     id: "nav-pull-requests",
     name: "Go to Pull Requests",
     keywords: "navigate pulls pr home",
+    icon: GitPullRequest,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/pulls");
@@ -102,6 +116,7 @@ const commands: Command[] = [
     id: "nav-home",
     name: "Home",
     keywords: "home main start pulls",
+    icon: Home,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/pulls");
@@ -112,6 +127,7 @@ const commands: Command[] = [
     id: "nav-branches",
     name: "Go to Branches",
     keywords: "navigate branches",
+    icon: GitBranch,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/branches");
@@ -122,6 +138,7 @@ const commands: Command[] = [
     id: "nav-issues",
     name: "Go to Issues",
     keywords: "navigate issues",
+    icon: CircleDot,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/issues");
@@ -132,6 +149,7 @@ const commands: Command[] = [
     id: "nav-me",
     name: "My Stuff",
     keywords: "navigate me profile assignments",
+    icon: User,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/me");
@@ -142,6 +160,7 @@ const commands: Command[] = [
     id: "nav-stats",
     name: "Go to Statistics",
     keywords: "navigate stats analytics metrics dashboard",
+    icon: BarChart3,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/stats");
@@ -152,6 +171,7 @@ const commands: Command[] = [
     id: "nav-feed",
     name: "Go to Activity Feed",
     keywords: "navigate feed activity stream updates",
+    icon: Activity,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/feed");
@@ -162,6 +182,7 @@ const commands: Command[] = [
     id: "nav-shipyard",
     name: "Go to Shipyard",
     keywords: "navigate shipyard ship ready approved shipit",
+    icon: Ship,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/shipyard");
@@ -172,6 +193,7 @@ const commands: Command[] = [
     id: "nav-migrations",
     name: "Go to Migrations",
     keywords: "navigate migrations database schema change migration",
+    icon: Database,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/migrations");
@@ -182,6 +204,7 @@ const commands: Command[] = [
     id: "nav-firefighter",
     name: "Go to Firefighter",
     keywords: "navigate firefighter ff linear ticket emergency",
+    icon: Flame,
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/firefighter");
@@ -193,6 +216,7 @@ const commands: Command[] = [
     name: "Show Keyboard Shortcuts",
     keywords: "help shortcuts",
     shortcut: "⌘/",
+    icon: Keyboard,
     action: () => useUIStore.getState().toggleKeyboardShortcuts(),
     preview: <div>Display keyboard shortcuts help</div>,
   },
@@ -201,6 +225,7 @@ const commands: Command[] = [
     name: "Go to Pull Request",
     keywords: "navigate pr pull request search find",
     shortcut: "⌘P",
+    icon: Search,
     action: () => {
       useUIStore.getState().toggleCommandPalette();
       setTimeout(() => useUIStore.getState().togglePRPalette(), 50);
@@ -265,6 +290,7 @@ export default function CommandPalette() {
         name: "Approve PR",
         keywords: "approve review lgtm",
         shortcut: "⌘⇧A",
+        icon: CheckCircle,
         action: () => {
           useUIStore.getState().triggerApprovePR();
         },
@@ -274,6 +300,7 @@ export default function CommandPalette() {
         id: "close-pr",
         name: "Close PR",
         keywords: "close pr pull request",
+        icon: XCircle,
         action: () => {
           useUIStore.getState().triggerClosePR();
         },
@@ -304,6 +331,7 @@ export default function CommandPalette() {
         name: "Add Comment",
         keywords: "comment write reply focus",
         shortcut: "⌘⇧C",
+        icon: MessageSquare,
         action: () => {
           useUIStore.getState().triggerFocusCommentBox();
         },
@@ -323,6 +351,7 @@ export default function CommandPalette() {
         id: "copy-gh-checkout",
         name: "Copy gh pr checkout command",
         keywords: "git checkout gh pr copy clipboard",
+        icon: Copy,
         action: () => {
           navigator.clipboard.writeText(`gh pr checkout ${prNumber}`);
         },
@@ -387,6 +416,7 @@ export default function CommandPalette() {
             name: `Switch to ${repo.full_name}`,
             keywords: `repo switch go navigate ${repo.full_name} ${repo.owner} ${repo.name}`,
             section: "Starred Repos",
+            icon: Star,
             action: () => {
               const setRepo = (window as any).__commandSetSelectedRepo;
               if (setRepo) {
