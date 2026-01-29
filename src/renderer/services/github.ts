@@ -331,7 +331,7 @@ export class GitHubAPI {
     console.time(`GraphQL fetch for ${owner}/${repo}`);
     const stateFilter = state === "all" ? "" : `, states: [${state.toUpperCase()}]`;
 
-    // Much simpler query - no nested reviews, minimal nested objects
+    // Lightweight query with review decision for approval status
     const query = `
       query ($owner: String!, $name: String!, $after: String) {
         repository(owner: $owner, name: $name) {
@@ -370,6 +370,28 @@ export class GitHubAPI {
                   color
                 }
               }
+              reviewDecision
+              reviewRequests(first: 10) {
+                nodes {
+                  requestedReviewer {
+                    ... on User {
+                      login
+                    }
+                    ... on Team {
+                      name
+                    }
+                  }
+                }
+              }
+              latestOpinionatedReviews(first: 10) {
+                nodes {
+                  state
+                  author {
+                    login
+                    avatarUrl
+                  }
+                }
+              }
               createdAt
               updatedAt
               closedAt
@@ -403,6 +425,41 @@ export class GitHubAPI {
 
         for (const pr of prData.nodes) {
           if (!pr) continue;
+
+          // Derive approval status from reviewDecision or latestOpinionatedReviews
+          let approvalStatus: "approved" | "changes_requested" | "pending" | "none" = "none";
+          const approvedBy: { login: string; avatar_url: string }[] = [];
+          const changesRequestedBy: { login: string; avatar_url: string }[] = [];
+
+          // Use reviewDecision if available (most reliable)
+          if (pr.reviewDecision === "APPROVED") {
+            approvalStatus = "approved";
+          } else if (pr.reviewDecision === "CHANGES_REQUESTED") {
+            approvalStatus = "changes_requested";
+          } else if (pr.reviewDecision === "REVIEW_REQUIRED") {
+            approvalStatus = "pending";
+          }
+
+          // Extract reviewer info from latestOpinionatedReviews
+          if (pr.latestOpinionatedReviews?.nodes) {
+            for (const review of pr.latestOpinionatedReviews.nodes) {
+              if (!review?.author) continue;
+              const reviewer = {
+                login: review.author.login,
+                avatar_url: review.author.avatarUrl || "",
+              };
+              if (review.state === "APPROVED") {
+                approvedBy.push(reviewer);
+              } else if (review.state === "CHANGES_REQUESTED") {
+                changesRequestedBy.push(reviewer);
+              }
+            }
+          }
+
+          // Fallback: if no reviewDecision but has review requests, mark as pending
+          if (approvalStatus === "none" && pr.reviewRequests?.nodes?.length > 0) {
+            approvalStatus = "pending";
+          }
 
           pullRequests.push({
             id: pr.databaseId ?? pr.number,
@@ -442,7 +499,9 @@ export class GitHubAPI {
               login: a.login,
               avatar_url: a.avatarUrl,
             })) || [],
-            requested_reviewers: [], // Will fetch if needed in detail view
+            requested_reviewers: pr.reviewRequests?.nodes?.map((r: any) => ({
+              login: r.requestedReviewer?.login || r.requestedReviewer?.name || "unknown",
+            })) || [],
             labels: pr.labels?.nodes?.map((l: any) => ({
               name: l.name,
               color: l.color,
@@ -452,13 +511,12 @@ export class GitHubAPI {
             updated_at: pr.updatedAt,
             closed_at: pr.closedAt,
             merged_at: pr.mergedAt,
-            // These are now included in the lightweight query!
             changed_files: pr.changedFiles ?? 0,
             additions: pr.additions ?? 0,
             deletions: pr.deletions ?? 0,
-            approvalStatus: "none" as const, // Will fetch if needed
-            approvedBy: [],
-            changesRequestedBy: [],
+            approvalStatus,
+            approvedBy,
+            changesRequestedBy,
           });
         }
       }
@@ -525,6 +583,16 @@ export class GitHubAPI {
                   color
                 }
               }
+              reviewDecision
+              latestOpinionatedReviews(first: 10) {
+                nodes {
+                  state
+                  author {
+                    login
+                    avatarUrl
+                  }
+                }
+              }
               createdAt
               updatedAt
               closedAt
@@ -564,6 +632,32 @@ export class GitHubAPI {
           if (mergedDate && mergedDate < cutoffDate) {
             hasNextPage = false; // Stop pagination since older PRs won't be needed
             break;
+          }
+
+          // Derive approval status from reviewDecision or latestOpinionatedReviews
+          let approvalStatus: "approved" | "changes_requested" | "pending" | "none" = "none";
+          const approvedBy: { login: string; avatar_url: string }[] = [];
+          const changesRequestedBy: { login: string; avatar_url: string }[] = [];
+
+          if (pr.reviewDecision === "APPROVED") {
+            approvalStatus = "approved";
+          } else if (pr.reviewDecision === "CHANGES_REQUESTED") {
+            approvalStatus = "changes_requested";
+          }
+
+          if (pr.latestOpinionatedReviews?.nodes) {
+            for (const review of pr.latestOpinionatedReviews.nodes) {
+              if (!review?.author) continue;
+              const reviewer = {
+                login: review.author.login,
+                avatar_url: review.author.avatarUrl || "",
+              };
+              if (review.state === "APPROVED") {
+                approvedBy.push(reviewer);
+              } else if (review.state === "CHANGES_REQUESTED") {
+                changesRequestedBy.push(reviewer);
+              }
+            }
           }
 
           pullRequests.push({
@@ -617,9 +711,9 @@ export class GitHubAPI {
             changed_files: pr.changedFiles ?? 0,
             additions: pr.additions ?? 0,
             deletions: pr.deletions ?? 0,
-            approvalStatus: "none" as const,
-            approvedBy: [],
-            changesRequestedBy: [],
+            approvalStatus,
+            approvedBy,
+            changesRequestedBy,
           });
         }
       }

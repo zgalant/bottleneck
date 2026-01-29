@@ -116,10 +116,29 @@ export const useLinearIssueStore = create<LinearIssueState>((set, get) => ({
       // Build the map of Linear ID -> PRs
       const linearToPRMap = buildLinearIssueToPRMap(pullRequests, owner, repo);
 
+      // Get existing issues to preserve approval status
+      const existingIssues = get().issues;
+
       // Enrich issues with linked PRs
       const issueMap = new Map<string, LinearIssue>();
       for (const issue of issues) {
-        const linkedPRs = (linearToPRMap.get(issue.identifier) || []).map(prToLinkedPR);
+        // Get existing linkedPRs for this issue to preserve approvalStatus
+        const existingIssue = existingIssues.get(issue.identifier);
+        const existingPRsByNumber = new Map(
+          (existingIssue?.linkedPRs || []).map(pr => [pr.number, pr])
+        );
+
+        const linkedPRs = (linearToPRMap.get(issue.identifier) || []).map(pr => {
+          const newLinkedPR = prToLinkedPR(pr);
+          const existingPR = existingPRsByNumber.get(pr.number);
+          
+          // Preserve existing approvalStatus if new one is "none" (not yet fetched)
+          if (newLinkedPR.approvalStatus === "none" && existingPR?.approvalStatus && existingPR.approvalStatus !== "none") {
+            return { ...newLinkedPR, approvalStatus: existingPR.approvalStatus };
+          }
+          return newLinkedPR;
+        });
+
         issueMap.set(issue.identifier, {
           ...issue,
           linkedPRs,
@@ -149,7 +168,23 @@ export const useLinearIssueStore = create<LinearIssueState>((set, get) => ({
 
     const updatedIssues = new Map<string, LinearIssue>();
     for (const [id, issue] of currentIssues.entries()) {
-      const linkedPRs = (linearToPRMap.get(issue.identifier) || []).map(prToLinkedPR);
+      // Build a map of existing linkedPRs by number for quick lookup
+      const existingPRsByNumber = new Map(
+        (issue.linkedPRs || []).map(pr => [pr.number, pr])
+      );
+
+      const linkedPRs = (linearToPRMap.get(issue.identifier) || []).map(pr => {
+        const newLinkedPR = prToLinkedPR(pr);
+        const existingPR = existingPRsByNumber.get(pr.number);
+        
+        // Preserve existing approvalStatus if new one is "none" (not yet fetched)
+        // This prevents issues from flickering to wrong columns during sync
+        if (newLinkedPR.approvalStatus === "none" && existingPR?.approvalStatus && existingPR.approvalStatus !== "none") {
+          return { ...newLinkedPR, approvalStatus: existingPR.approvalStatus };
+        }
+        return newLinkedPR;
+      });
+      
       updatedIssues.set(id, { ...issue, linkedPRs });
     }
 
