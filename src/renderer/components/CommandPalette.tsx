@@ -179,6 +179,16 @@ const commands: Command[] = [
     preview: <div>View PRs labeled "change: migration"</div>,
   },
   {
+    id: "nav-firefighter",
+    name: "Go to Firefighter",
+    keywords: "navigate firefighter ff linear ticket emergency",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/firefighter");
+    },
+    preview: <div>View PRs with FF-* Linear tickets from the last week</div>,
+  },
+  {
     id: "show-shortcuts",
     name: "Show Keyboard Shortcuts",
     keywords: "help shortcuts",

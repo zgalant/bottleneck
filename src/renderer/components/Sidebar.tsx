@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { GitPullRequest, GitBranch, Settings, AlertCircle, SatelliteDish, BarChart3, Zap, User, Ship, Users, Database } from "lucide-react";
+import { GitPullRequest, GitBranch, Settings, AlertCircle, SatelliteDish, BarChart3, Zap, User, Ship, Users, Database, Flame } from "lucide-react";
 import { CursorIcon } from "./icons/CursorIcon";
 import { DevinIcon } from "./icons/DevinIcon";
 import { ChatGPTIcon } from "./icons/ChatGPTIcon";
@@ -28,6 +28,7 @@ const NAV_ITEMS: SidebarNavItem[] = [
   { path: "/following", icon: Users, label: "Following" },
   { path: "/shipyard", icon: Ship, label: "Shipyard" },
   { path: "/migrations", icon: Database, label: "Migrations" },
+  { path: "/firefighter", icon: Flame, label: "Firefighter" },
   { path: "/issues", icon: AlertCircle, label: "Issue Tracker" },
   { path: "/branches", icon: GitBranch, label: "Branches" },
   { path: "/feed", icon: Zap, label: "Activity Feed" },

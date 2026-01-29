@@ -32,6 +32,7 @@ const ChatGPTView = lazy(() => import("./views/ChatGPTView"));
 const ShipyardView = lazy(() => import("./views/ShipyardView"));
 const FollowingView = lazy(() => import("./views/FollowingView"));
 const MigrationsView = lazy(() => import("./views/MigrationsView"));
+const FirefighterView = lazy(() => import("./views/FirefighterView"));
 
 PerfLogger.mark("App.tsx module loaded");
 
@@ -278,6 +279,7 @@ function App() {
                <Route path="/agents/chatgpt" element={<ChatGPTView />} />
                <Route path="/shipyard" element={<ShipyardView />} />
                <Route path="/migrations" element={<MigrationsView />} />
+               <Route path="/firefighter" element={<FirefighterView />} />
                {/* Catch-all route for unmatched paths */}
                <Route path="*" element={<Navigate to="/pulls" replace />} />
             </Routes>
