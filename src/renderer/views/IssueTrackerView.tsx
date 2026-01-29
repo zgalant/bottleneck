@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle, GitPullRequest, User, Settings, ExternalLink } from "lucide-react";
+import { FileEdit, Eye, MessageSquare, CheckCircle, GitPullRequest, Settings, ExternalLink } from "lucide-react";
 import { useLinearIssueStore } from "../stores/linearIssueStore";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
@@ -9,7 +9,7 @@ import { LinearIssue } from "../services/linear";
 import { LinearIssueCard } from "./IssueTrackerView/components/LinearIssueCard";
 import { cn } from "../utils/cn";
 
-type KanbanColumn = "backlog" | "todo" | "in_progress" | "in_review" | "done" | "canceled";
+type KanbanColumn = "draft" | "ready_for_review" | "in_review" | "approved";
 
 interface KanbanColumnConfig {
   id: KanbanColumn;
@@ -18,63 +18,40 @@ interface KanbanColumnConfig {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   bgColor: string;
-  linearStateTypes: string[]; // Maps to Linear's state.type
 }
 
 const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
-    id: "backlog",
-    title: "Backlog",
-    description: "Issues in backlog or triage",
-    icon: AlertCircle,
+    id: "draft",
+    title: "Draft",
+    description: "All linked PRs are drafts",
+    icon: FileEdit,
     color: "text-gray-600",
     bgColor: "bg-gray-50 dark:bg-gray-800/50",
-    linearStateTypes: ["backlog", "triage"],
   },
   {
-    id: "todo",
-    title: "Todo",
-    description: "Issues ready to be started",
-    icon: AlertCircle,
+    id: "ready_for_review",
+    title: "Ready for Review",
+    description: "Has non-draft PR, awaiting review",
+    icon: Eye,
     color: "text-blue-600",
     bgColor: "bg-blue-50 dark:bg-blue-900/20",
-    linearStateTypes: ["unstarted"],
-  },
-  {
-    id: "in_progress",
-    title: "In Progress",
-    description: "Issues being actively worked on",
-    icon: User,
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
-    linearStateTypes: ["started"],
   },
   {
     id: "in_review",
     title: "In Review",
-    description: "Issues with PRs under review",
-    icon: GitPullRequest,
+    description: "Has reviews but not yet approved",
+    icon: MessageSquare,
     color: "text-purple-600",
     bgColor: "bg-purple-50 dark:bg-purple-900/20",
-    linearStateTypes: [], // Determined by PR state, not Linear state
   },
   {
-    id: "done",
-    title: "Done",
-    description: "Completed issues",
+    id: "approved",
+    title: "Approved",
+    description: "Ready to merge",
     icon: CheckCircle,
     color: "text-green-600",
     bgColor: "bg-green-50 dark:bg-green-900/20",
-    linearStateTypes: ["completed"],
-  },
-  {
-    id: "canceled",
-    title: "Canceled",
-    description: "Canceled issues",
-    icon: CheckCircle,
-    color: "text-gray-600",
-    bgColor: "bg-gray-50 dark:bg-gray-800/50",
-    linearStateTypes: ["canceled"],
   },
 ];
 
@@ -278,43 +255,64 @@ export default function IssueTrackerView() {
   const categorizedIssues = useMemo(() => {
     const issuesArray = Array.from(filteredIssues.values());
 
+    // Debug: log all issues and their PR data
+    console.log('[IssueTracker] Total issues:', issuesArray.length);
+    issuesArray.forEach((issue) => {
+      console.log(`[IssueTracker] ${issue.identifier}:`, {
+        linkedPRs: issue.linkedPRs?.map(pr => ({
+          number: pr.number,
+          state: pr.state,
+          draft: pr.draft,
+          merged: pr.merged,
+          approvalStatus: pr.approvalStatus,
+        })),
+      });
+    });
+
     const categories: Record<KanbanColumn, LinearIssue[]> = {
-      backlog: [],
-      todo: [],
-      in_progress: [],
+      draft: [],
+      ready_for_review: [],
       in_review: [],
-      done: [],
-      canceled: [],
+      approved: [],
     };
 
     issuesArray.forEach((issue) => {
-      const stateType = issue.state.type;
+      // Only consider open, non-merged PRs
+      const openPRs = issue.linkedPRs?.filter(
+        (pr) => pr.state === "open" && !pr.merged,
+      ) || [];
 
-      // Check if issue has open non-draft PRs (should go to "In Review")
-      const hasOpenNonDraftPR = issue.linkedPRs?.some(
-        (pr) => pr.state === "open" && !pr.draft && !pr.merged,
+      // Skip issues with no open PRs (all merged or closed)
+      if (openPRs.length === 0) {
+        console.log(`[IssueTracker] ${issue.identifier}: Skipped - no open PRs`);
+        return;
+      }
+
+      // Check for approved PRs first (highest priority)
+      const hasApprovedPR = openPRs.some((pr) => pr.approvalStatus === "approved");
+      if (hasApprovedPR) {
+        categories.approved.push(issue);
+        return;
+      }
+
+      // Check for PRs with review activity (changes requested or pending reviews)
+      const hasReviewActivity = openPRs.some(
+        (pr) => !pr.draft && (pr.approvalStatus === "changes_requested" || pr.approvalStatus === "pending"),
       );
-
-      if (hasOpenNonDraftPR && stateType !== "completed" && stateType !== "canceled") {
+      if (hasReviewActivity) {
         categories.in_review.push(issue);
         return;
       }
 
-      // Categorize by Linear state type
-      if (stateType === "backlog" || stateType === "triage") {
-        categories.backlog.push(issue);
-      } else if (stateType === "unstarted") {
-        categories.todo.push(issue);
-      } else if (stateType === "started") {
-        categories.in_progress.push(issue);
-      } else if (stateType === "completed") {
-        categories.done.push(issue);
-      } else if (stateType === "canceled") {
-        categories.canceled.push(issue);
-      } else {
-        // Fallback to backlog
-        categories.backlog.push(issue);
+      // Check if all PRs are drafts
+      const allDrafts = openPRs.every((pr) => pr.draft);
+      if (allDrafts) {
+        categories.draft.push(issue);
+        return;
       }
+
+      // Has non-draft PRs but no review activity yet
+      categories.ready_for_review.push(issue);
     });
 
     return categories;

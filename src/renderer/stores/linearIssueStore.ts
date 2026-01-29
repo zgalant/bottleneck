@@ -26,6 +26,7 @@ function prToLinkedPR(pr: PullRequest) {
     state: pr.state as "open" | "closed",
     draft: pr.draft || false,
     merged: pr.merged || false,
+    approvalStatus: pr.approvalStatus,
     author: pr.user
       ? {
           login: pr.user.login,
