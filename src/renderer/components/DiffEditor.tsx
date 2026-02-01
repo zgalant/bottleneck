@@ -133,10 +133,11 @@ export function DiffEditor({
   }, [file.patch, file.filename, file.previous_filename, file.status]);
 
   // Build line annotations from comment threads for the diff viewer
+  // Use originalLineNumber (the actual file line) instead of lineNumber (which may be mapped to editor rows)
   const lineAnnotations = useMemo<DiffLineAnnotation<CommentMetadata>[]>(() => {
     return commentManager.commentThreads.map((thread) => ({
       side: thread.side === "LEFT" ? "deletions" : "additions",
-      lineNumber: thread.lineNumber,
+      lineNumber: thread.originalLineNumber,
       metadata: {
         threadId: thread.id,
         side: thread.side,
