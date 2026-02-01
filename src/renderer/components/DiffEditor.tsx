@@ -248,12 +248,13 @@ export function DiffEditor({
             options={{
               diffStyle: diffView === "split" ? "split" : "unified",
               theme: {
-                dark: "github-dark",
-                light: "github-light",
+                dark: "pierre-dark",
+                light: "pierre-light",
               },
               themeType: theme === "dark" ? "dark" : "light",
               overflow: wordWrap ? "wrap" : "scroll",
               diffIndicators: "classic",
+              disableBackground: false,
               lineDiffType: "word",
               disableFileHeader: true,
               hunkSeparators: "line-info",
@@ -286,7 +287,17 @@ export function DiffEditor({
               );
             }}
             className="h-full"
-            style={{ fontSize: "12px", lineHeight: "18px" }}
+            style={{
+              fontSize: "12px",
+              lineHeight: "18px",
+              // Force diff background colors via CSS custom properties
+              "--diffs-bg-addition-override": theme === "dark" ? "rgba(35, 134, 54, 0.15)" : "#dafbe1",
+              "--diffs-bg-addition-number-override": theme === "dark" ? "rgba(35, 134, 54, 0.25)" : "#ccffd8",
+              "--diffs-bg-deletion-override": theme === "dark" ? "rgba(248, 81, 73, 0.15)" : "#ffebe9",
+              "--diffs-bg-deletion-number-override": theme === "dark" ? "rgba(248, 81, 73, 0.25)" : "#ffd7d5",
+              "--diffs-addition-color-override": theme === "dark" ? "#3fb950" : "#1a7f37",
+              "--diffs-deletion-color-override": theme === "dark" ? "#f85149" : "#cf222e",
+            } as React.CSSProperties}
           />
         ) : (
           <div className="flex items-center justify-center h-full">
