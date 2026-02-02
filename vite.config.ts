@@ -1,16 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import monacoEditorPlugin from "vite-plugin-monaco-editor";
 
 export default defineConfig({
   plugins: [
     react(),
-    monacoEditorPlugin({
-      languageWorkers: ["editorWorkerService", "typescript", "json"],
-      customWorkers: [],
-      publicPath: "./monacoeditorwork/",
-    }),
   ],
   base: "./",
   root: path.resolve(__dirname, "src/renderer"),
@@ -26,9 +20,9 @@ export default defineConfig({
         manualChunks: (id) => {
           // Put all node_modules into a single vendor chunk to avoid dependency issues
           if (id.includes('node_modules')) {
-            // Monaco should be separate as it's large and rarely changes
-            if (id.includes('monaco-editor') || id.includes('@monaco-editor')) {
-              return 'monaco';
+            // Pierre/diffs and shiki should be separate as they're large
+            if (id.includes('@pierre/diffs') || id.includes('shiki')) {
+              return 'diffs';
             }
             // Everything else goes into vendor (including React)
             return 'vendor';

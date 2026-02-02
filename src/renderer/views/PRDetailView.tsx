@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import { useParams, useLocation } from "react-router-dom";
-// Lazy load DiffEditor to avoid loading Monaco on app startup
+// Lazy load DiffEditor to avoid loading diff libraries on app startup
 const DiffEditor = lazy(() => import("../components/DiffEditor").then(module => ({ default: module.DiffEditor })));
 import { ConversationTab, ConversationTabRef } from "../components/ConversationTab";
 import { useAuthStore } from "../stores/authStore";

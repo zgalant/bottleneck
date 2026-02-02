@@ -97,23 +97,6 @@ function App() {
     }
   }, [checkAuth, loadSettings]);
 
-  // Setup global error handler to suppress Monaco internal diff errors
-  useEffect(() => {
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (event.reason?.message?.includes("no diff result available")) {
-        // Suppress Monaco's internal diff computation errors
-        event.preventDefault();
-        console.debug("Suppressed Monaco diff computation error (non-critical)");
-      }
-    };
-
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-
-    return () => {
-      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
-    };
-  }, []);
-
   // Check if current time is during Central Time weekday daytime hours (9am-6pm CT, Mon-Fri)
   const isCentralTimeDaytime = (): boolean => {
     const now = new Date();

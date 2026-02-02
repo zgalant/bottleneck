@@ -44,56 +44,6 @@
     @apply bg-gray-500;
   }
 
-  /* Monaco editor overrides */
-  .monaco-editor {
-    @apply rounded;
-  }
-
-  .monaco-editor .margin {
-    @apply bg-gray-800;
-  }
-
-  /* GitHub-style diff coloring in Monaco */
-  .monaco-editor .line-insert {
-    background-color: #e6ffec !important;
-  }
-
-  .monaco-editor .line-delete {
-    background-color: #ffebe9 !important;
-  }
-
-  .monaco-editor .char-insert {
-    background-color: #abf2bc !important;
-  }
-
-  .monaco-editor .char-delete {
-    background-color: #fdb8c0 !important;
-  }
-
-  .dark .monaco-editor .char-insert {
-    background-color: rgba(46, 160, 67, 0.4) !important;
-  }
-
-  .dark .monaco-editor .char-delete {
-    background-color: rgba(248, 81, 73, 0.4) !important;
-  }
-
-  .light .monaco-editor .line-insert {
-    background-color: #e6ffec !important;
-  }
-
-  .light .monaco-editor .line-delete {
-    background-color: #ffebe9 !important;
-  }
-
-  .dark .monaco-editor .line-insert {
-    background-color: rgba(46, 160, 67, 0.2) !important;
-  }
-
-  .dark .monaco-editor .line-delete {
-    background-color: rgba(248, 81, 73, 0.2) !important;
-  }
-
   /* Diff highlighting for unified view - GitHub style */
   .diff-addition {
     background-color: #e6ffec !important;
@@ -103,68 +53,11 @@
     background-color: #ffebe9 !important;
   }
 
-  .monaco-editor .comment-thread-decoration,
-  .monaco-editor .comment-hover-decoration {
-    width: 16px !important;
-    height: 16px !important;
-    margin-left: 5px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-  }
-
-  .monaco-editor .comment-thread-decoration {
-    background-color: rgba(59, 130, 246, 0.16);
-    border: 1px solid rgba(59, 130, 246, 0.45);
-    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.4);
-  }
-
-  .monaco-editor .comment-thread-decoration-start::after {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: rgba(37, 99, 235, 0.9);
-  }
-
-  .monaco-editor .comment-thread-decoration-middle::after,
-  .monaco-editor .comment-thread-decoration-end::after {
-    content: "";
-    width: 2px;
-    height: 100%;
-    border-radius: 1px;
-    background-color: rgba(37, 99, 235, 0.6);
-  }
-
-  .monaco-editor .comment-hover-decoration {
-    border: 1px dashed rgba(148, 163, 184, 0.9);
-    color: rgba(148, 163, 184, 0.9);
-    font-size: 11px;
-    font-weight: 600;
-    background-color: rgba(15, 23, 42, 0.05);
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-  }
-
-  .monaco-editor .comment-hover-decoration::before {
-    content: "+";
-    line-height: 12px;
-  }
-
-  .monaco-editor.vs-dark .comment-hover-decoration {
-    background-color: rgba(30, 64, 175, 0.3);
-    border-color: rgba(191, 219, 254, 0.4);
-    color: rgba(191, 219, 254, 0.85);
-  }
-
-  .monaco-editor .comment-line-highlight {
-    background-color: rgba(59, 130, 246, 0.18) !important;
-  }
-
-  .monaco-editor .comment-line-highlight-margin {
-    border-left: 2px solid rgba(59, 130, 246, 0.8);
+  /* @pierre/diffs styling overrides */
+  pierre-file-diff,
+  pierre-patch-diff,
+  pierre-multi-file-diff {
+    @apply rounded;
   }
 
   /* Keyboard focus styles */

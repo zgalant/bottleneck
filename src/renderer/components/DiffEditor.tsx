@@ -5,9 +5,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { DiffEditor as MonacoDiffEditor, loader } from "@monaco-editor/react";
-import type { editor as MonacoEditorType } from "monaco-editor";
-import type { Monaco } from "@monaco-editor/react";
+import {
+  PatchDiff,
+  DiffLineAnnotation,
+  FileDiffMetadata,
+} from "@pierre/diffs/react";
 
 import type { Comment, File } from "../services/github";
 import { useUIStore } from "../stores/uiStore";
@@ -16,15 +18,8 @@ import { CommentOverlay } from "./diff/CommentOverlay";
 import { ImageDiffViewer } from "./diff/ImageDiffViewer";
 import { isImageFile } from "../utils/fileType";
 import { useDiffModel } from "./diff/useDiffModel";
-import { useCommentManager } from "./diff/useCommentManager";
+import { useSimpleCommentManager } from "./diff/useSimpleCommentManager";
 import { getLanguageFromFilename } from "./diff/commentUtils";
-
-// Configure Monaco Editor loader
-loader.config({
-  paths: {
-    vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs",
-  },
-});
 
 interface DiffEditorProps {
   file: File;
@@ -42,6 +37,12 @@ interface DiffEditorProps {
   token: string | null;
   currentUser: { login: string; avatar_url?: string } | null;
   onCommentAdded?: (comment: Comment) => void;
+}
+
+interface CommentMetadata {
+  threadId: number;
+  side: "LEFT" | "RIGHT";
+  commentCount: number;
 }
 
 export function DiffEditor({
@@ -71,69 +72,25 @@ export function DiffEditor({
     theme,
   } = useUIStore();
 
-  const diffEditorRef =
-    useRef<MonacoEditorType.IStandaloneDiffEditor | null>(null);
-  const monacoRef = useRef<Monaco | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastRenderedFileRef = useRef<string | null>(null);
 
   const hasFullContent = !(originalContent === undefined && modifiedContent === undefined);
   const [showFullFile, setShowFullFile] = useState(false);
-  const [diffEditorReady, setDiffEditorReady] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
   const [hideUnchangedRegions, setHideUnchangedRegions] = useState(false);
-  const [contentMismatch, setContentMismatch] = useState(false);
 
   // Reset to diff view when switching files
   useEffect(() => {
     setShowFullFile(false);
   }, [file.filename]);
 
-  // Track if file changed while content was still loading
-  useEffect(() => {
-    // When file changes, mark content as potentially mismatched until verified
-    if (lastRenderedFileRef.current !== null && lastRenderedFileRef.current !== file.filename) {
-      setContentMismatch(true);
-      console.debug('[DiffEditor] File changed, waiting for matching content');
-    }
-    lastRenderedFileRef.current = file.filename;
-  }, [file.filename]);
-
-  // Clear mismatch flag once content is ready and matches the current file
-  useEffect(() => {
-    if (contentMismatch && ((!showFullFile && file.patch) || (originalContent !== undefined && modifiedContent !== undefined))) {
-      setContentMismatch(false);
-      console.debug('[DiffEditor] Content loaded and validated');
-    }
-  }, [contentMismatch, showFullFile, file.patch, originalContent, modifiedContent]);
-
-  useEffect(() => {
-    diffEditorRef.current = null;
-    monacoRef.current = null;
-    setIsInitializing(true);
-    setDiffEditorReady(false);
-
-    const timer = window.setTimeout(() => {
-      setIsInitializing(false);
-    }, 50);
-
-    return () => window.clearTimeout(timer);
-  }, [file.filename]);
-
   const diffModel = useDiffModel(file, showFullFile);
-  const { patchData } = diffModel;
 
-  const commentManager = useCommentManager({
+  const commentManager = useSimpleCommentManager({
     file,
     comments,
     diffModel,
-    diffEditorRef,
-    monacoRef,
     containerRef,
     showFullFile,
-    diffView,
-    wordWrap,
-    diffEditorReady,
     repoOwner,
     repoName,
     pullNumber,
@@ -147,58 +104,49 @@ export function DiffEditor({
   );
   const isImageDiff = (isBinary || isRecognizedImage) && isRecognizedImage;
 
-  const effectiveOriginalContent =
-    showFullFile && originalContent !== undefined
-      ? originalContent || ""
-      : patchData.original || "";
-  const effectiveModifiedContent =
-    showFullFile && modifiedContent !== undefined
-      ? modifiedContent || ""
-      : patchData.modified || "";
-
-  // Debug logging to see what content Monaco is receiving
-  useEffect(() => {
-    if (!isInitializing) {
-      console.log('[DiffEditor] Content debug:', {
-        filename: file.filename,
-        status: file.status,
-        showFullFile,
-        hasPatch: !!file.patch,
-        patchLength: file.patch?.length,
-        originalLength: effectiveOriginalContent.length,
-        modifiedLength: effectiveModifiedContent.length,
-        originalDefined: originalContent !== undefined,
-        modifiedDefined: modifiedContent !== undefined,
-      });
+  // Build the patch string for the diff viewer
+  const patchContent = useMemo(() => {
+    if (!file.patch) {
+      return "";
     }
-  }, [file.filename, effectiveOriginalContent, effectiveModifiedContent, isInitializing, showFullFile, file.status, file.patch, originalContent, modifiedContent]);
 
-  const isContentReady = showFullFile
-    ? (originalContent !== undefined && modifiedContent !== undefined)
-    : true;
+    // Construct a full unified diff header for the patch
+    const oldName = file.previous_filename || file.filename;
+    const newName = file.filename;
 
-  // Additional validation: Ensure we have meaningful content to diff
-  // For added files: modified should have content (or be explicitly empty)
-  // For removed files: original should have content (or be explicitly empty)
-  // For modified files: we should have patch data or full file content
-  const hasValidContent = showFullFile
-    ? true // If showing full file, trust that we have the content loaded
-    : (file.status === "added" || file.status === "removed" || file.patch !== undefined || (patchData.original !== "" || patchData.modified !== ""));
+    let header = `diff --git a/${oldName} b/${newName}\n`;
 
-  const shouldRenderImageViewer = isImageDiff && !isInitializing;
-  const shouldRenderEditor = !isImageDiff && !isInitializing && isContentReady && hasValidContent && !contentMismatch;
+    if (file.status === "added") {
+      header += `new file mode 100644\n`;
+      header += `--- /dev/null\n`;
+      header += `+++ b/${newName}\n`;
+    } else if (file.status === "removed") {
+      header += `deleted file mode 100644\n`;
+      header += `--- a/${oldName}\n`;
+      header += `+++ /dev/null\n`;
+    } else {
+      header += `--- a/${oldName}\n`;
+      header += `+++ b/${newName}\n`;
+    }
 
-  // Prevent rendering if both contents are identical (no actual diff)
-  const contentsAreIdentical = effectiveOriginalContent === effectiveModifiedContent && file.status === "modified";
+    return header + file.patch;
+  }, [file.patch, file.filename, file.previous_filename, file.status]);
 
-  if (contentsAreIdentical && !showFullFile) {
-    console.warn('[DiffEditor] Contents are identical, forcing full file view');
-  }
+  // Build line annotations from comment threads for the diff viewer
+  // Use originalLineNumber (the actual file line) instead of lineNumber (which may be mapped to editor rows)
+  const lineAnnotations = useMemo<DiffLineAnnotation<CommentMetadata>[]>(() => {
+    return commentManager.commentThreads.map((thread) => ({
+      side: thread.side === "LEFT" ? "deletions" : "additions",
+      lineNumber: thread.originalLineNumber,
+      metadata: {
+        threadId: thread.id,
+        side: thread.side,
+        commentCount: thread.comments.length,
+      },
+    }));
+  }, [commentManager.commentThreads]);
 
-  if (contentMismatch && !isInitializing) {
-    console.debug('[DiffEditor] Content mismatch detected, waiting for proper content to load');
-  }
-
+  // Determine the language for syntax highlighting
   const language = getLanguageFromFilename(file.filename);
 
   const handleToggleFullFile = useCallback(() => {
@@ -209,6 +157,61 @@ export function DiffEditor({
   const handleToggleHideUnchanged = useCallback(() => {
     setHideUnchangedRegions((prev) => !prev);
   }, []);
+
+  // Handle line click for comments
+  const handleLineClick = useCallback((lineNumber: number, side: "deletions" | "additions") => {
+    const commentSide = side === "deletions" ? "LEFT" : "RIGHT";
+    commentManager.handleOverlayTarget(lineNumber, commentSide);
+  }, [commentManager]);
+
+  // Check if we have valid content to display
+  const hasValidPatch = Boolean(file.patch && file.patch.trim());
+
+  // For full file view, we'd need to show the entire file content
+  // This is a simplified version - full file view would need the actual file contents
+  const showFullFileContent = showFullFile && hasFullContent && originalContent !== undefined && modifiedContent !== undefined;
+
+  // Build full file diff if needed
+  const fullFilePatch = useMemo(() => {
+    if (!showFullFileContent) return "";
+
+    const oldName = file.previous_filename || file.filename;
+    const newName = file.filename;
+
+    let header = `diff --git a/${oldName} b/${newName}\n`;
+    header += `--- a/${oldName}\n`;
+    header += `+++ b/${newName}\n`;
+
+    // Create a unified diff from the full file contents
+    const oldLines = (originalContent || "").split("\n");
+    const newLines = (modifiedContent || "").split("\n");
+
+    // Simple diff: show all as context with changes
+    // This is a simplified approach - for real full file view,
+    // we'd need proper diff algorithm
+    const maxLines = Math.max(oldLines.length, newLines.length);
+    let hunk = `@@ -1,${oldLines.length} +1,${newLines.length} @@\n`;
+
+    for (let i = 0; i < maxLines; i++) {
+      const oldLine = oldLines[i];
+      const newLine = newLines[i];
+
+      if (oldLine === newLine && oldLine !== undefined) {
+        hunk += ` ${oldLine}\n`;
+      } else {
+        if (oldLine !== undefined) {
+          hunk += `-${oldLine}\n`;
+        }
+        if (newLine !== undefined) {
+          hunk += `+${newLine}\n`;
+        }
+      }
+    }
+
+    return header + hunk;
+  }, [showFullFileContent, originalContent, modifiedContent, file.filename, file.previous_filename]);
+
+  const effectivePatch = showFullFileContent ? fullFilePatch : patchContent;
 
   return (
     <div className="flex flex-col h-full">
@@ -230,8 +233,8 @@ export function DiffEditor({
         onMarkViewed={onMarkViewed}
       />
 
-      <div className="flex-1 relative" ref={containerRef}>
-        {shouldRenderImageViewer ? (
+      <div className="flex-1 relative overflow-auto" ref={containerRef}>
+        {isImageDiff ? (
           <ImageDiffViewer
             file={file}
             originalSrc={originalBinaryContent}
@@ -239,88 +242,73 @@ export function DiffEditor({
             diffView={diffView}
             theme={theme}
           />
-        ) : shouldRenderEditor ? (
-          <MonacoDiffEditor
-             key={file.filename}
-             original={
-               file.status === "added" ? "" : (effectiveOriginalContent || "")
-             }
-             modified={
-               file.status === "removed" ? "" : (effectiveModifiedContent || "")
-             }
-             language={language}
-             theme={theme === "dark" ? "vs-dark" : "vs"}
-             options={{
-               readOnly: true,
-               renderSideBySide: diffView === "split",
-               renderWhitespace: showWhitespace ? "all" : "none",
-               wordWrap: wordWrap ? "on" : "off",
-               minimap: { enabled: false },
-               scrollBeyondLastLine: false,
-               fontSize: 12,
-               lineHeight: 18,
-               renderLineHighlight: "none",
-               glyphMargin: false,
-               folding: true,
-               lineNumbers: "on",
-               lineDecorationsWidth: 22,
-               lineNumbersMinChars: 3,
-               renderValidationDecorations: "off",
-               scrollbar: {
-                 vertical: "visible",
-                 horizontal: "visible",
-                 verticalScrollbarSize: 10,
-                 horizontalScrollbarSize: 10,
-               },
-               hideUnchangedRegions: {
-                 enabled: showFullFile && hideUnchangedRegions,
-                 revealLineCount: 3,
-                 minimumLineCount: 3,
-                 contextLineCount: 3,
-               },
-               diffAlgorithm: "advanced",
-               ignoreTrimWhitespace: true,
-               renderIndicators: true,
-               enableSplitViewResizing: true,
-               diffCodeLens: false,
-             }}
-            onMount={(editor, monaco) => {
-              diffEditorRef.current = editor;
-              monacoRef.current = monaco;
-
-              try {
-                // Verify that models are properly set
-                const originalModel = editor.getOriginalEditor().getModel();
-                const modifiedModel = editor.getModifiedEditor().getModel();
-
-                if (!originalModel || !modifiedModel) {
-                  console.error('[DiffEditor] Monaco models not initialized');
-                  setDiffEditorReady(false);
-                  return;
-                }
-
-                // Log model info for debugging
-                console.debug('[DiffEditor] Monaco mounted:', {
-                  filename: file.filename,
-                  originalLines: originalModel.getLineCount(),
-                  modifiedLines: modifiedModel.getLineCount(),
-                  language: originalModel.getLanguageId(),
-                });
-
-                // Let Monaco handle the initial diff computation
-                // Mark as ready after a brief delay to ensure Monaco is fully initialized
-                setTimeout(() => {
-                  setDiffEditorReady(true);
-                }, 150);
-              } catch (error) {
-                console.error("Monaco Editor initialization error:", error);
-                setDiffEditorReady(false);
-              }
+        ) : hasValidPatch || showFullFileContent ? (
+          <PatchDiff<CommentMetadata>
+            key={`${file.filename}-${showFullFile}`}
+            patch={effectivePatch}
+            options={{
+              diffStyle: diffView === "split" ? "split" : "unified",
+              theme: {
+                dark: "pierre-dark",
+                light: "pierre-light",
+              },
+              themeType: theme === "dark" ? "dark" : "light",
+              overflow: wordWrap ? "wrap" : "scroll",
+              diffIndicators: "classic",
+              disableBackground: false,
+              lineDiffType: "word",
+              disableFileHeader: true,
+              hunkSeparators: "line-info",
             }}
+            lineAnnotations={lineAnnotations}
+            renderAnnotation={(annotation) => (
+              <div
+                className="flex items-center gap-1 px-2 py-0.5 text-xs cursor-pointer hover:bg-blue-500/20 rounded"
+                onClick={() => handleLineClick(annotation.lineNumber, annotation.side)}
+              >
+                <span className="text-blue-500">
+                  {annotation.metadata?.commentCount || 1} comment{(annotation.metadata?.commentCount || 1) > 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+            renderHoverUtility={(getHoveredLine) => {
+              const hoveredLine = getHoveredLine();
+              if (!hoveredLine) return null;
+
+              return (
+                <button
+                  className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  onClick={() => {
+                    const side = hoveredLine.annotationSide;
+                    handleLineClick(hoveredLine.lineNumber, side);
+                  }}
+                >
+                  +
+                </button>
+              );
+            }}
+            className="h-full"
+            style={{
+              fontSize: "12px",
+              lineHeight: "18px",
+              // Force diff background colors via CSS custom properties
+              "--diffs-bg-addition-override": theme === "dark" ? "rgba(35, 134, 54, 0.15)" : "#dafbe1",
+              "--diffs-bg-addition-number-override": theme === "dark" ? "rgba(35, 134, 54, 0.25)" : "#ccffd8",
+              "--diffs-bg-deletion-override": theme === "dark" ? "rgba(248, 81, 73, 0.15)" : "#ffebe9",
+              "--diffs-bg-deletion-number-override": theme === "dark" ? "rgba(248, 81, 73, 0.25)" : "#ffd7d5",
+              "--diffs-addition-color-override": theme === "dark" ? "#3fb950" : "#1a7f37",
+              "--diffs-deletion-color-override": theme === "dark" ? "#f85149" : "#cf222e",
+            } as React.CSSProperties}
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <div className="text-gray-500">Loading...</div>
+            <div className="text-gray-500">
+              {file.status === "added" && !file.patch
+                ? "New empty file"
+                : file.status === "removed" && !file.patch
+                  ? "File deleted"
+                  : "No changes to display"}
+            </div>
           </div>
         )}
 

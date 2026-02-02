@@ -16,6 +16,8 @@ export interface InlineCommentThread {
   startLineNumber?: number | null;
   endLineNumber?: number | null;
   comments: Comment[];
+  /** The original file line number (before any editor mapping) */
+  originalLineNumber: number;
 }
 
 export type ActiveOverlay =
@@ -121,6 +123,7 @@ export const buildThreads = (comments: Comment[]): InlineCommentThread[] => {
         startLineNumber: normalizedStart,
         endLineNumber: normalizedEnd,
         comments: threadComments,
+        originalLineNumber: normalizedEnd,
       });
     });
 

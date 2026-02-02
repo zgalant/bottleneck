@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter } from "react-router-dom";
 import App from "./App";
 import "./styles/global.css";
-// Monaco CSS is handled by @monaco-editor/react lazy loading
 import { PerfLogger } from "./utils/perfLogger";
 
 PerfLogger.mark("main.tsx execution started");
