@@ -317,6 +317,16 @@ export default function CommandPalette() {
         preview: <div>Convert this draft PR to ready for review</div>,
       });
       cmds.push({
+        id: "convert-to-draft",
+        name: "Convert to Draft",
+        keywords: "draft convert wip work in progress unpublish",
+        icon: Pencil,
+        action: () => {
+          window.dispatchEvent(new CustomEvent("pr-action:convert-draft"));
+        },
+        preview: <div>Convert this PR back to a draft</div>,
+      });
+      cmds.push({
         id: "add-reviewers",
         name: "Add Reviewers",
         keywords: "reviewers add request review",

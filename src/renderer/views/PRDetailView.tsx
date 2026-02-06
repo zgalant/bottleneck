@@ -197,6 +197,9 @@ export default function PRDetailView() {
     const onMarkReady = () => {
       window.dispatchEvent(new CustomEvent("pr-internal:do-mark-ready"));
     };
+    const onConvertDraft = () => {
+      window.dispatchEvent(new CustomEvent("pr-internal:do-convert-draft"));
+    };
 
     window.addEventListener("pr-action:approve", onApprove);
     window.addEventListener("pr-action:close", onClose);
@@ -207,6 +210,7 @@ export default function PRDetailView() {
     window.addEventListener("pr-action:ship-it", onShipIt);
     window.addEventListener("pr-action:resync", onResync);
     window.addEventListener("pr-action:mark-ready", onMarkReady);
+    window.addEventListener("pr-action:convert-draft", onConvertDraft);
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
@@ -218,6 +222,7 @@ export default function PRDetailView() {
       window.removeEventListener("pr-action:ship-it", onShipIt);
       window.removeEventListener("pr-action:resync", onResync);
       window.removeEventListener("pr-action:mark-ready", onMarkReady);
+      window.removeEventListener("pr-action:convert-draft", onConvertDraft);
     };
   }, [pr, navigationState, owner, repo, number, token]);
 
@@ -1055,9 +1060,14 @@ export default function PRDetailView() {
     const doMarkReady = () => {
       handleToggleDraft();
     };
+    const doConvertDraft = () => {
+      handleToggleDraft();
+    };
     window.addEventListener("pr-internal:do-mark-ready", doMarkReady);
+    window.addEventListener("pr-internal:do-convert-draft", doConvertDraft);
     return () => {
       window.removeEventListener("pr-internal:do-mark-ready", doMarkReady);
+      window.removeEventListener("pr-internal:do-convert-draft", doConvertDraft);
     };
   }, [pr, token, owner, repo, currentUser]);
 
