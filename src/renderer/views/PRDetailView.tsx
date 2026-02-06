@@ -194,6 +194,9 @@ export default function PRDetailView() {
     const onResync = () => {
       window.dispatchEvent(new CustomEvent("pr-internal:do-resync"));
     };
+    const onMarkReady = () => {
+      window.dispatchEvent(new CustomEvent("pr-internal:do-mark-ready"));
+    };
 
     window.addEventListener("pr-action:approve", onApprove);
     window.addEventListener("pr-action:close", onClose);
@@ -203,6 +206,7 @@ export default function PRDetailView() {
     window.addEventListener("pr-action:navigate-next", onNavigateNext);
     window.addEventListener("pr-action:ship-it", onShipIt);
     window.addEventListener("pr-action:resync", onResync);
+    window.addEventListener("pr-action:mark-ready", onMarkReady);
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
@@ -213,6 +217,7 @@ export default function PRDetailView() {
       window.removeEventListener("pr-action:navigate-next", onNavigateNext);
       window.removeEventListener("pr-action:ship-it", onShipIt);
       window.removeEventListener("pr-action:resync", onResync);
+      window.removeEventListener("pr-action:mark-ready", onMarkReady);
     };
   }, [pr, navigationState, owner, repo, number, token]);
 
@@ -1045,6 +1050,16 @@ export default function PRDetailView() {
       alert(errorMessage);
     }
   };
+
+  useEffect(() => {
+    const doMarkReady = () => {
+      handleToggleDraft();
+    };
+    window.addEventListener("pr-internal:do-mark-ready", doMarkReady);
+    return () => {
+      window.removeEventListener("pr-internal:do-mark-ready", doMarkReady);
+    };
+  }, [pr, token, owner, repo, currentUser]);
 
   const toggleFileViewed = (filename: string) => {
     const newViewed = new Set(viewedFiles);

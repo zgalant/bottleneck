@@ -307,6 +307,16 @@ export default function CommandPalette() {
         preview: <div>Close this pull request without merging</div>,
       });
       cmds.push({
+        id: "mark-ready-for-review",
+        name: "Mark as Ready for Review",
+        keywords: "ready review draft undraft publish",
+        icon: Rocket,
+        action: () => {
+          window.dispatchEvent(new CustomEvent("pr-action:mark-ready"));
+        },
+        preview: <div>Convert this draft PR to ready for review</div>,
+      });
+      cmds.push({
         id: "add-reviewers",
         name: "Add Reviewers",
         keywords: "reviewers add request review",
