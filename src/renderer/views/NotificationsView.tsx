@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell, Check, CheckCheck, GitPullRequest, AlertCircle, GitCommit,
@@ -129,11 +129,15 @@ function NotificationRow({
   theme,
   onNavigate,
   onMarkRead,
+  isSelected,
+  rowRef,
 }: {
   notification: GitHubNotification;
   theme: "light" | "dark";
   onNavigate: (n: GitHubNotification) => void;
   onMarkRead: (id: string) => void;
+  isSelected: boolean;
+  rowRef?: React.Ref<HTMLButtonElement>;
 }) {
   const enrichment = notification.enrichment;
   const Icon = getSubjectIcon(notification.subject.type, enrichment);
@@ -147,17 +151,22 @@ function NotificationRow({
 
   return (
     <button
+      ref={rowRef}
       type="button"
       onClick={() => onNavigate(notification)}
       className={cn(
         "w-full text-left rounded-lg border p-4 transition hover:shadow-sm group",
-        notification.unread
+        isSelected
           ? theme === "dark"
-            ? "bg-gray-800 border-gray-600 hover:border-gray-500"
-            : "bg-white border-gray-300 hover:border-gray-400"
-          : theme === "dark"
-            ? "bg-gray-800/50 border-gray-700 hover:border-gray-600"
-            : "bg-gray-50 border-gray-200 hover:border-gray-300",
+            ? "bg-blue-900/40 border-blue-500 ring-1 ring-blue-500/50"
+            : "bg-blue-50 border-blue-400 ring-1 ring-blue-400/50"
+          : notification.unread
+            ? theme === "dark"
+              ? "bg-gray-800 border-gray-600 hover:border-gray-500"
+              : "bg-white border-gray-300 hover:border-gray-400"
+            : theme === "dark"
+              ? "bg-gray-800/50 border-gray-700 hover:border-gray-600"
+              : "bg-gray-50 border-gray-200 hover:border-gray-300",
       )}
     >
       <div className="flex items-start gap-3">
@@ -348,37 +357,81 @@ export default function NotificationsView() {
     enriching,
     error,
     filter,
+    selectedIndex,
     fetchNotifications,
     setFilter,
     markAsRead,
     markAllAsRead,
+    moveSelection,
   } = useNotificationStore();
+  const selectedRowRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const handleNavigate = (notification: GitHubNotification) => {
-    if (notification.unread) {
-      markAsRead(notification.id);
-    }
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
 
-    if (notification.subject.type === "PullRequest") {
-      const info = extractPRNumber(notification.subject.url);
-      if (info) {
-        navigate(`/pulls/${info.owner}/${info.repo}/${info.number}`);
+  const handleNavigate = useCallback(
+    (notification: GitHubNotification) => {
+      if (notification.unread) {
+        markAsRead(notification.id);
+      }
+
+      if (notification.subject.type === "PullRequest") {
+        const info = extractPRNumber(notification.subject.url);
+        if (info) {
+          navigate(`/pulls/${info.owner}/${info.repo}/${info.number}`);
+          return;
+        }
+      }
+
+      if (notification.subject.type === "Issue") {
+        const info = extractPRNumber(notification.subject.url);
+        if (info) {
+          navigate(`/issues/${info.owner}/${info.repo}/${info.number}`);
+          return;
+        }
+      }
+    },
+    [markAsRead, navigate],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+
+      if (e.key === "j") {
+        e.preventDefault();
+        moveSelection("down");
         return;
       }
-    }
-
-    if (notification.subject.type === "Issue") {
-      const info = extractPRNumber(notification.subject.url);
-      if (info) {
-        navigate(`/issues/${info.owner}/${info.repo}/${info.number}`);
+      if (e.key === "k") {
+        e.preventDefault();
+        moveSelection("up");
         return;
       }
-    }
-  };
+      if (e.key === "e") {
+        e.preventDefault();
+        const n = notifications[useNotificationStore.getState().selectedIndex];
+        if (n?.unread) markAsRead(n.id);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "o") {
+        e.preventDefault();
+        const n = notifications[useNotificationStore.getState().selectedIndex];
+        if (n) handleNavigate(n);
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [notifications, moveSelection, markAsRead, handleNavigate]);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
 
@@ -533,14 +586,16 @@ export default function NotificationsView() {
           </div>
         )}
 
-        <div className="space-y-2 max-w-4xl mx-auto">
-          {notifications.map((notification) => (
+        <div className="space-y-2">
+          {notifications.map((notification, index) => (
             <NotificationRow
               key={notification.id}
               notification={notification}
               theme={theme}
               onNavigate={handleNavigate}
               onMarkRead={markAsRead}
+              isSelected={index === selectedIndex}
+              rowRef={index === selectedIndex ? selectedRowRef : undefined}
             />
           ))}
         </div>

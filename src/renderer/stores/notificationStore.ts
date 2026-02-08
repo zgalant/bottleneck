@@ -10,11 +10,14 @@ interface NotificationState {
   enriching: boolean;
   error: string | null;
   filter: ReadFilter;
+  selectedIndex: number;
 
   fetchNotifications: () => Promise<void>;
   setFilter: (filter: ReadFilter) => void;
   markAsRead: (threadId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  setSelectedIndex: (index: number) => void;
+  moveSelection: (direction: "up" | "down") => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -23,6 +26,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   enriching: false,
   error: null,
   filter: "unread",
+  selectedIndex: 0,
 
   fetchNotifications: async () => {
     const token = useAuthStore.getState().token;
@@ -49,7 +53,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
 
-      set({ notifications: filtered, loading: false });
+      set({ notifications: filtered, loading: false, selectedIndex: 0 });
 
       // Enrich notifications in the background (batch of concurrent requests)
       if (filtered.length > 0) {
@@ -140,5 +144,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       console.error("Failed to mark all as read:", error);
       set({ notifications: prev });
     }
+  },
+
+  setSelectedIndex: (index: number) => {
+    const { notifications } = get();
+    if (notifications.length === 0) return;
+    set({ selectedIndex: Math.max(0, Math.min(index, notifications.length - 1)) });
+  },
+
+  moveSelection: (direction: "up" | "down") => {
+    const { selectedIndex, notifications } = get();
+    if (notifications.length === 0) return;
+    const next =
+      direction === "down"
+        ? Math.min(selectedIndex + 1, notifications.length - 1)
+        : Math.max(selectedIndex - 1, 0);
+    set({ selectedIndex: next });
   },
 }));

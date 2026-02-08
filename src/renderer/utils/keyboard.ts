@@ -85,10 +85,11 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
-      // Approve PR (Cmd/Ctrl + Shift + A)
+      // Go to PR homepage (Cmd/Ctrl + Shift + A)
       if ((e.key === "a" || e.key === "A") && e.shiftKey) {
         e.preventDefault();
-        useUIStore.getState().triggerApprovePR();
+        const nav = (window as any).__commandNavigate;
+        if (nav) nav("/pulls");
         return;
       }
 
@@ -104,6 +105,14 @@ export function setupKeyboardShortcuts() {
         e.preventDefault();
         const nav = (window as any).__commandNavigate;
         if (nav) nav("/pulls");
+        return;
+      }
+
+      // Go to notifications (Cmd/Ctrl + Shift + N)
+      if ((e.key === "n" || e.key === "N") && e.shiftKey) {
+        e.preventDefault();
+        const nav = (window as any).__commandNavigate;
+        if (nav) nav("/notifications");
         return;
       }
 

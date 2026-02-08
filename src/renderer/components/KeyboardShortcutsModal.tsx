@@ -32,10 +32,21 @@ const SHORTCUTS = [
   {
     category: "PR Actions",
     shortcuts: [
-      { keys: ["Cmd", "Shift", "A"], description: "Approve PR" },
+      { keys: ["Cmd", "Shift", "A"], description: "Go to PR homepage" },
       { keys: ["Cmd", "L"], description: "Add label" },
       { keys: ["Cmd", "Shift", "C"], description: "Focus comment box" },
       { keys: ["Cmd", "Shift", "H"], description: "Go to home (PR list)" },
+      { keys: ["Cmd", "Shift", "N"], description: "Go to notifications" },
+    ],
+  },
+  {
+    category: "Notifications",
+    shortcuts: [
+      { keys: ["J"], description: "Move selection down" },
+      { keys: ["K"], description: "Move selection up" },
+      { keys: ["E"], description: "Mark selected as read" },
+      { keys: ["Enter"], description: "Open selected notification" },
+      { keys: ["O"], description: "Open selected notification" },
     ],
   },
   {
