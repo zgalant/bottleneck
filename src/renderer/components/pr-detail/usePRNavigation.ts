@@ -10,6 +10,7 @@ interface NavigationState {
   siblingPRs?: any[];
   currentTaskGroup?: string;
   currentAgent?: string;
+  from?: string;
 }
 
 export function usePRNavigation(
@@ -123,6 +124,7 @@ export function usePRNavigation(
           })),
           currentTaskGroup: currentPrefix,
           currentAgent: currentAgent,
+          from: navigationState?.from,
         };
 
         setNavigationState(newNavState);
@@ -165,7 +167,7 @@ export function usePRNavigation(
           e.preventDefault();
           const prevPR = navigationState.siblingPRs[currentIndex - 1];
           navigate(`/pulls/${owner}/${repo}/${prevPR.number}`, {
-            state: navigationState,
+            state: { ...navigationState, from: navigationState.from },
           });
         } else if (
           e.key === "ArrowRight" &&
@@ -174,7 +176,7 @@ export function usePRNavigation(
           e.preventDefault();
           const nextPR = navigationState.siblingPRs[currentIndex + 1];
           navigate(`/pulls/${owner}/${repo}/${nextPR.number}`, {
-            state: navigationState,
+            state: { ...navigationState, from: navigationState.from },
           });
         }
       }

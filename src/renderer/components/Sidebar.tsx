@@ -123,6 +123,7 @@ export default function Sidebar({
   const handlePullRequestSelect = (pr: any) => {
     navigate(
       `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`,
+      { state: { from: location.pathname } },
     );
   };
 

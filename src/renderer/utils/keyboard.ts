@@ -1,5 +1,21 @@
 import { useUIStore } from "../stores/uiStore";
 
+function navigateBack() {
+  const pathname = window.location.hash.replace(/^#/, '') || '/';
+  const isPRDetail = /^\/pulls\/[^/]+\/[^/]+\/\d+$/.test(pathname);
+  const isIssueDetail = /^\/issues\/[^/]+\/[^/]+\/\d+$/.test(pathname);
+
+  if (!isPRDetail && !isIssueDetail) return;
+
+
+  const nav = (window as any).__commandNavigate;
+  if (!nav) return;
+
+  const historyState = window.history.state?.usr;
+  const backPath = historyState?.from || (isPRDetail ? "/pulls" : "/issues");
+  nav(backPath);
+}
+
 export function setupKeyboardShortcuts() {
   if (!window.electron) {
     console.warn(
@@ -123,17 +139,10 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
-      // Navigate back (Cmd/Ctrl + Left Arrow)
-      if (e.key === "ArrowLeft") {
+      // Navigate back (Cmd/Ctrl + Shift + Left Arrow)
+      if (e.key === "ArrowLeft" && e.shiftKey) {
         e.preventDefault();
-        const pathMatch = window.location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
-        if (pathMatch) {
-          const nav = (window as any).__commandNavigate;
-          // Use the 'from' state if available, otherwise fall back to /pulls
-          const historyState = window.history.state?.usr;
-          const backPath = historyState?.from || "/pulls";
-          if (nav) nav(backPath);
-        }
+        navigateBack();
         return;
       }
 
@@ -177,12 +186,17 @@ export function setupKeyboardShortcuts() {
     }
   };
 
+  const handleSwipeBack = () => {
+    navigateBack();
+  };
+
   window.electron.on("toggle-sidebar", handleToggleSidebar);
   window.electron.on("toggle-right-panel", handleToggleRightPanel);
   window.electron.on("open-command-palette", handleOpenCommandPalette);
   window.electron.on("open-pr-palette", handleOpenPRPalette);
   window.electron.on("show-shortcuts", handleShowShortcuts);
   window.electron.on("add-label", handleAddLabel);
+  window.electron.on("navigate-back", handleSwipeBack);
 
   return () => {
     document.removeEventListener("keydown", handleKeyDown);
@@ -192,5 +206,6 @@ export function setupKeyboardShortcuts() {
     window.electron.off("open-pr-palette", handleOpenPRPalette);
     window.electron.off("show-shortcuts", handleShowShortcuts);
     window.electron.off("add-label", handleAddLabel);
+    window.electron.off("navigate-back", handleSwipeBack);
   };
 }

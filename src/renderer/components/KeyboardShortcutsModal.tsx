@@ -15,7 +15,7 @@ const SHORTCUTS = [
       { keys: ["Cmd", "/"], description: "Show this keyboard shortcuts help" },
       { keys: ["Cmd", "B"], description: "Toggle sidebar" },
       { keys: ["Cmd", "Shift", "B"], description: "Toggle right panel" },
-      { keys: ["Cmd", "Left Arrow"], description: "Go back to PR list" },
+      { keys: ["Cmd", "Shift", "Left Arrow"], description: "Go back" },
       { keys: ["Cmd", ","], description: "Go to settings" },
       { keys: ["Cmd", "Shift", "]"], description: "Next tab (on PR detail)" },
       { keys: ["Cmd", "Shift", "["], description: "Previous tab (on PR detail)" },

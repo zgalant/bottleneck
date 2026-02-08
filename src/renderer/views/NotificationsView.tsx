@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Bell, Check, CheckCheck, GitPullRequest, AlertCircle, GitCommit,
   MessageSquare, RefreshCw, Tag, GitMerge,
@@ -351,6 +351,7 @@ function NotificationRow({
 export default function NotificationsView() {
   const { theme } = useUIStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     notifications,
     loading,
@@ -383,7 +384,9 @@ export default function NotificationsView() {
       if (notification.subject.type === "PullRequest") {
         const info = extractPRNumber(notification.subject.url);
         if (info) {
-          navigate(`/pulls/${info.owner}/${info.repo}/${info.number}`);
+          navigate(`/pulls/${info.owner}/${info.repo}/${info.number}`, {
+            state: { from: location.pathname },
+          });
           return;
         }
       }
@@ -391,12 +394,14 @@ export default function NotificationsView() {
       if (notification.subject.type === "Issue") {
         const info = extractPRNumber(notification.subject.url);
         if (info) {
-          navigate(`/issues/${info.owner}/${info.repo}/${info.number}`);
+          navigate(`/issues/${info.owner}/${info.repo}/${info.number}`, {
+            state: { from: location.pathname },
+          });
           return;
         }
       }
     },
-    [markAsRead, navigate],
+    [markAsRead, navigate, location.pathname],
   );
 
   useEffect(() => {

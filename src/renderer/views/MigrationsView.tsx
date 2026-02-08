@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { GitPullRequest, Database, ExternalLink, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
@@ -31,6 +31,7 @@ function parseMigrationPath(filename: string): MigrationFile | null {
 
 export default function MigrationsView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { pullRequests, selectedRepo, fetchPullRequests, loading } = usePRStore();
   const { theme } = useUIStore();
   const { token } = useAuthStore();
@@ -139,7 +140,8 @@ export default function MigrationsView() {
 
   const handlePRClick = (pr: PullRequest) => {
     navigate(
-      `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`
+      `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`,
+      { state: { from: location.pathname } },
     );
   };
 

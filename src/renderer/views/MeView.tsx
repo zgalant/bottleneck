@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { User, GitPullRequest, Eye, Users, Filter, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { usePRStore } from "../stores/prStore";
@@ -226,6 +226,7 @@ const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
 
 export default function MeView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const { pullRequests } = usePRStore();
   const { theme } = useUIStore();
@@ -322,6 +323,7 @@ export default function MeView() {
   const handleSelectPR = (pr: PullRequest) => {
     navigate(
       `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`,
+      { state: { from: location.pathname } },
     );
   };
 

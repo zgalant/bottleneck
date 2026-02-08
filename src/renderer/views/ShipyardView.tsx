@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { GitPullRequest, Ship, ExternalLink } from "lucide-react";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
@@ -12,6 +12,7 @@ const SHIPYARD_READY_STATUSES = ["merged", "closed"] as const;
 
 export default function ShipyardView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { pullRequests, selectedRepo, fetchPullRequests, loading } = usePRStore();
   const { theme } = useUIStore();
   const { token } = useAuthStore();
@@ -58,7 +59,8 @@ export default function ShipyardView() {
 
   const handlePRClick = (pr: PullRequest) => {
     navigate(
-      `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`
+      `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`,
+      { state: { from: location.pathname } },
     );
   };
 

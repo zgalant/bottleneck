@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FileEdit, Eye, MessageSquare, CheckCircle, GitPullRequest, Settings, ExternalLink } from "lucide-react";
 import { useLinearIssueStore } from "../stores/linearIssueStore";
 import { usePRStore } from "../stores/prStore";
@@ -200,6 +200,7 @@ function NoIssuesMessage({ theme }: { theme: "light" | "dark" }) {
 
 export default function IssueTrackerView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     issues,
     loading,
@@ -390,9 +391,11 @@ export default function IssueTrackerView() {
 
   const handlePRClick = useCallback((prNumber: number) => {
     if (selectedRepo) {
-      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${prNumber}`);
+      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${prNumber}`, {
+        state: { from: location.pathname },
+      });
     }
-  }, [navigate, selectedRepo]);
+  }, [navigate, selectedRepo, location.pathname]);
 
   if (!selectedRepo) {
     return <WelcomeView />;
