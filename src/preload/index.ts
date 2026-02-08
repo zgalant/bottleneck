@@ -114,6 +114,9 @@ const electronAPI = {
       "toggle-diff-view",
       "toggle-whitespace",
       "show-shortcuts",
+      "add-label",
+      "open-pr-palette",
+      "navigate-back",
     ];
 
     if (validChannels.includes(channel)) {

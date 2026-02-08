@@ -170,6 +170,13 @@ function createWindow() {
     mainWindow = null;
   });
 
+  // Handle macOS three-finger swipe gestures
+  mainWindow.on("swipe" as any, (_event: any, direction: string) => {
+    if (direction === "left") {
+      mainWindow?.webContents.send("navigate-back");
+    }
+  });
+
   // Handle external links
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
