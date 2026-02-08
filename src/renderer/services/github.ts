@@ -246,6 +246,46 @@ export interface Commit {
   url: string;
 }
 
+export interface NotificationActor {
+  login: string;
+  avatar_url: string;
+}
+
+export interface NotificationEnrichment {
+  actor?: NotificationActor;
+  commentBody?: string;
+  prState?: "open" | "closed" | "merged";
+  prDraft?: boolean;
+  issueState?: "open" | "closed";
+  number?: number;
+}
+
+export interface GitHubNotification {
+  id: string;
+  unread: boolean;
+  reason: string;
+  updated_at: string;
+  last_read_at: string | null;
+  subject: {
+    title: string;
+    url: string | null;
+    latest_comment_url: string | null;
+    type: string;
+  };
+  repository: {
+    id: number;
+    name: string;
+    full_name: string;
+    owner: {
+      login: string;
+      avatar_url: string;
+    };
+  };
+  url: string;
+  subscription_url: string;
+  enrichment?: NotificationEnrichment;
+}
+
 export class GitHubAPI {
   private octokit: Octokit;
 
@@ -2317,5 +2357,130 @@ export class GitHubAPI {
       console.error("Error fetching user organizations:", error);
       return [];
     }
+  }
+
+  async getNotifications(options: {
+    all?: boolean;
+    participating?: boolean;
+    since?: string;
+    before?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<GitHubNotification[]> {
+    const allNotifications: GitHubNotification[] = [];
+    const maxPages = 4;
+    const perPage = 50;
+
+    for (let page = 1; page <= maxPages; page++) {
+      const { data } = await this.octokit.activity.listNotificationsForAuthenticatedUser({
+        ...options,
+        per_page: perPage,
+        page,
+      });
+
+      const mapped: GitHubNotification[] = data.map((n: any) => ({
+        id: n.id,
+        unread: n.unread,
+        reason: n.reason,
+        updated_at: n.updated_at,
+        last_read_at: n.last_read_at,
+        subject: {
+          title: n.subject.title,
+          url: n.subject.url,
+          latest_comment_url: n.subject.latest_comment_url,
+          type: n.subject.type,
+        },
+        repository: {
+          id: n.repository.id,
+          name: n.repository.name,
+          full_name: n.repository.full_name,
+          owner: {
+            login: n.repository.owner.login,
+            avatar_url: n.repository.owner.avatar_url,
+          },
+        },
+        url: n.url,
+        subscription_url: n.subscription_url,
+      }));
+
+      allNotifications.push(...mapped);
+
+      if (data.length < perPage) {
+        break;
+      }
+    }
+
+    return allNotifications;
+  }
+
+  async enrichNotification(notification: GitHubNotification): Promise<NotificationEnrichment> {
+    const enrichment: NotificationEnrichment = {};
+
+    try {
+      const subjectUrl = notification.subject.url;
+      if (subjectUrl) {
+        const numberMatch = subjectUrl.match(/\/(\d+)$/);
+        if (numberMatch) {
+          enrichment.number = parseInt(numberMatch[1], 10);
+        }
+      }
+
+      const commentUrl = notification.subject.latest_comment_url;
+      if (commentUrl) {
+        try {
+          const { data } = await this.octokit.request("GET {url}", { url: commentUrl });
+          if (data.user) {
+            enrichment.actor = {
+              login: data.user.login,
+              avatar_url: data.user.avatar_url,
+            };
+          }
+          if (data.body) {
+            const body = data.body.replace(/\r?\n/g, " ").trim();
+            enrichment.commentBody = body.length > 200 ? body.slice(0, 200) + "…" : body;
+          }
+          if (!enrichment.commentBody && data.message) {
+            const msg = data.message.replace(/\r?\n/g, " ").trim();
+            enrichment.commentBody = msg.length > 200 ? msg.slice(0, 200) + "…" : msg;
+          }
+        } catch (e) {
+          // Comment fetch failed, try subject URL instead
+        }
+      }
+
+      if (subjectUrl && (notification.subject.type === "PullRequest" || notification.subject.type === "Issue")) {
+        try {
+          const { data } = await this.octokit.request("GET {url}", { url: subjectUrl });
+          if (!enrichment.actor && data.user) {
+            enrichment.actor = {
+              login: data.user.login,
+              avatar_url: data.user.avatar_url,
+            };
+          }
+          if (notification.subject.type === "PullRequest") {
+            enrichment.prState = data.merged ? "merged" : data.state;
+            enrichment.prDraft = data.draft;
+          } else {
+            enrichment.issueState = data.state;
+          }
+        } catch (e) {
+          // Subject fetch failed, continue without enrichment
+        }
+      }
+    } catch (e) {
+      console.error("Failed to enrich notification:", e);
+    }
+
+    return enrichment;
+  }
+
+  async markNotificationAsRead(threadId: string): Promise<void> {
+    await this.octokit.activity.markThreadAsRead({
+      thread_id: parseInt(threadId),
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    await this.octokit.activity.markNotificationsAsRead({});
   }
 }

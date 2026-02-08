@@ -3,7 +3,7 @@ import {
   Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw, Pencil,
   PanelLeftClose, PanelRightClose, Moon, Columns, Eye, WrapText, Settings, GitPullRequest, Home,
   GitBranch, CircleDot, User, BarChart3, Activity, Database, Flame, Keyboard, CheckCircle, XCircle,
-  MessageSquare, Copy, Star
+  MessageSquare, Copy, Star, Bell
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
@@ -210,6 +210,17 @@ const commands: Command[] = [
       if (nav) nav("/firefighter");
     },
     preview: <div>View PRs with FF-* Linear tickets from the last week</div>,
+  },
+  {
+    id: "nav-notifications",
+    name: "Go to Notifications",
+    keywords: "navigate notifications bell alerts inbox unread",
+    icon: Bell,
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/notifications");
+    },
+    preview: <div>View your GitHub notifications</div>,
   },
   {
     id: "show-shortcuts",

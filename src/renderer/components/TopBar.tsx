@@ -18,11 +18,13 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
 import { usePRStore } from "../stores/prStore";
 import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
+import { useNotificationStore } from "../stores/notificationStore";
 import { cn } from "../utils/cn";
 
 interface GroupedRepositories {
@@ -30,8 +32,10 @@ interface GroupedRepositories {
 }
 
 export default function TopBar() {
+  const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { toggleCommandPalette, theme, toggleTheme } = useUIStore();
+  const { notifications, fetchNotifications } = useNotificationStore();
   const { isSyncing, syncAll, lastSyncTime, syncErrors } = useSyncStore();
   const {
     repositories,
@@ -52,10 +56,16 @@ export default function TopBar() {
   const { favorites, loadFavorites } = useRepoFavoritesStore();
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Load favorites on mount
+  const unreadCount = React.useMemo(
+    () => notifications.filter((n) => n.unread).length,
+    [notifications],
+  );
+
+  // Load favorites and notifications on mount
   React.useEffect(() => {
     loadFavorites();
-  }, [loadFavorites]);
+    fetchNotifications();
+  }, [loadFavorites, fetchNotifications]);
   const matchesRepoSearch = React.useCallback((repo: any, query: string) => {
     if (!query) {
       return true;
@@ -846,13 +856,17 @@ export default function TopBar() {
 
         {/* Notifications */}
         <button
+          onClick={() => navigate("/notifications")}
           className={cn(
             "relative p-2 rounded transition-colors no-drag",
             theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100",
           )}
+          title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          )}
         </button>
 
         {/* User menu */}
