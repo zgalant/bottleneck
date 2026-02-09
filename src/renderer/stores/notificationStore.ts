@@ -4,6 +4,48 @@ import { useAuthStore } from "./authStore";
 
 type ReadFilter = "unread" | "read" | "all";
 
+const CACHE_KEY = "notificationReadIds";
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CachedReadEntry {
+  timestamp: number;
+}
+
+const loadReadCache = async (): Promise<Set<string>> => {
+  if (!window.electron) return new Set();
+  try {
+    const result = await window.electron.settings.get(CACHE_KEY);
+    if (result.success && result.value) {
+      const entries = result.value as Record<string, CachedReadEntry>;
+      const now = Date.now();
+      const valid = new Set<string>();
+      for (const [id, entry] of Object.entries(entries)) {
+        if (now - entry.timestamp < CACHE_TTL_MS) {
+          valid.add(id);
+        }
+      }
+      return valid;
+    }
+  } catch (error) {
+    console.error("Failed to load notification read cache:", error);
+  }
+  return new Set();
+};
+
+const saveReadCache = async (ids: Set<string>) => {
+  if (!window.electron) return;
+  try {
+    const entries: Record<string, CachedReadEntry> = {};
+    const now = Date.now();
+    for (const id of ids) {
+      entries[id] = { timestamp: now };
+    }
+    await window.electron.settings.set(CACHE_KEY, entries);
+  } catch (error) {
+    console.error("Failed to save notification read cache:", error);
+  }
+};
+
 interface NotificationState {
   notifications: GitHubNotification[];
   loading: boolean;
@@ -11,6 +53,7 @@ interface NotificationState {
   error: string | null;
   filter: ReadFilter;
   selectedIndex: number;
+  locallyReadIds: Set<string>;
 
   fetchNotifications: () => Promise<void>;
   setFilter: (filter: ReadFilter) => void;
@@ -27,6 +70,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   error: null,
   filter: "unread",
   selectedIndex: 0,
+  locallyReadIds: new Set(),
 
   fetchNotifications: async () => {
     const token = useAuthStore.getState().token;
@@ -34,6 +78,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
+      const cachedReadIds = await loadReadCache();
+      set({ locallyReadIds: cachedReadIds });
+
       const api = new GitHubAPI(token);
       const filter = get().filter;
       const notifications = await api.getNotifications({
@@ -41,11 +88,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         per_page: 50,
       });
 
-      let filtered = notifications;
+      const withLocalState = notifications.map((n) =>
+        cachedReadIds.has(n.id) ? { ...n, unread: false } : n
+      );
+
+      let filtered = withLocalState;
       if (filter === "read") {
-        filtered = notifications.filter((n) => !n.unread);
+        filtered = withLocalState.filter((n) => !n.unread);
       } else if (filter === "unread") {
-        filtered = notifications.filter((n) => n.unread);
+        filtered = withLocalState.filter((n) => n.unread);
       }
 
       filtered.sort(
@@ -55,7 +106,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       set({ notifications: filtered, loading: false, selectedIndex: 0 });
 
-      // Enrich notifications in the background (batch of concurrent requests)
       if (filtered.length > 0) {
         set({ enriching: true });
         const batchSize = 5;
@@ -99,28 +149,34 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const token = useAuthStore.getState().token;
     if (!token) return;
 
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === threadId ? { ...n, unread: false } : n
-      ),
-    }));
+    const newReadIds = new Set(get().locallyReadIds);
+    newReadIds.add(threadId);
+
+    if (get().filter === "unread") {
+      set((state) => {
+        const updated = state.notifications.filter((n) => n.id !== threadId);
+        return {
+          notifications: updated,
+          locallyReadIds: newReadIds,
+          selectedIndex: Math.min(state.selectedIndex, Math.max(0, updated.length - 1)),
+        };
+      });
+    } else {
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === threadId ? { ...n, unread: false } : n
+        ),
+        locallyReadIds: newReadIds,
+      }));
+    }
+
+    saveReadCache(newReadIds);
 
     try {
       const api = new GitHubAPI(token);
       await api.markNotificationAsRead(threadId);
-
-      if (get().filter === "unread") {
-        set((state) => ({
-          notifications: state.notifications.filter((n) => n.id !== threadId),
-        }));
-      }
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-      set((state) => ({
-        notifications: state.notifications.map((n) =>
-          n.id === threadId ? { ...n, unread: true } : n
-        ),
-      }));
+      console.error("Failed to mark notification as read on GitHub:", error);
     }
   },
 
@@ -129,20 +185,28 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (!token) return;
 
     const prev = get().notifications;
+    const newReadIds = new Set(get().locallyReadIds);
+    for (const n of prev) {
+      if (n.unread) newReadIds.add(n.id);
+    }
 
     set((state) => ({
       notifications:
         state.filter === "unread"
           ? []
           : state.notifications.map((n) => ({ ...n, unread: false })),
+      locallyReadIds: newReadIds,
+      selectedIndex: state.filter === "unread" ? 0 : state.selectedIndex,
     }));
+
+    saveReadCache(newReadIds);
 
     try {
       const api = new GitHubAPI(token);
       await api.markAllNotificationsAsRead();
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
-      set({ notifications: prev });
+      console.error("Failed to mark all as read on GitHub:", error);
+      set({ notifications: prev, locallyReadIds: get().locallyReadIds });
     }
   },
 
