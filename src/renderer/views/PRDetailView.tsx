@@ -200,6 +200,11 @@ export default function PRDetailView() {
     const onConvertDraft = () => {
       window.dispatchEvent(new CustomEvent("pr-internal:do-convert-draft"));
     };
+    const onCopyFilename = () => {
+      if (selectedFile) {
+        navigator.clipboard.writeText(selectedFile.filename);
+      }
+    };
 
     window.addEventListener("pr-action:approve", onApprove);
     window.addEventListener("pr-action:close", onClose);
@@ -211,6 +216,7 @@ export default function PRDetailView() {
     window.addEventListener("pr-action:resync", onResync);
     window.addEventListener("pr-action:mark-ready", onMarkReady);
     window.addEventListener("pr-action:convert-draft", onConvertDraft);
+    window.addEventListener("pr-action:copy-filename", onCopyFilename);
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
@@ -223,8 +229,9 @@ export default function PRDetailView() {
       window.removeEventListener("pr-action:resync", onResync);
       window.removeEventListener("pr-action:mark-ready", onMarkReady);
       window.removeEventListener("pr-action:convert-draft", onConvertDraft);
+      window.removeEventListener("pr-action:copy-filename", onCopyFilename);
     };
-  }, [pr, navigationState, owner, repo, number, token]);
+  }, [pr, navigationState, owner, repo, number, token, selectedFile]);
 
   // Handler for internal resync event (triggered by command palette)
   useEffect(() => {
@@ -1304,6 +1311,7 @@ export default function PRDetailView() {
                     onCommentAdded={(newComment) => {
                       setReviewComments((prev) => [...prev, newComment]);
                     }}
+                    orgName={owner || pr?.base.repo.owner.login || ""}
                   />
                 </Suspense>
               )}

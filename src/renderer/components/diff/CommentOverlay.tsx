@@ -1,12 +1,13 @@
-import { FC, MouseEvent as ReactMouseEvent } from "react";
+import { FC, MouseEvent as ReactMouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { AlertCircle, Loader2, MessageSquare, X } from "lucide-react";
-import { CompactMarkdownEditor } from "../CompactMarkdownEditor";
 import { cn } from "../../utils/cn";
 import {
   ActiveOverlay,
   InlineCommentThread,
 } from "./commentUtils";
+import { MentionTypeahead } from "../MentionTypeahead";
+import { useOrgStore } from "../../stores/orgStore";
 
 interface CommentOverlayProps {
   overlay: ActiveOverlay;
@@ -27,6 +28,7 @@ interface CommentOverlayProps {
   onResizeStart: (
     mode: "width" | "height" | "both",
   ) => (e: ReactMouseEvent) => void;
+  orgName?: string;
 }
 
 export const CommentOverlay: FC<CommentOverlayProps> = ({
@@ -46,8 +48,119 @@ export const CommentOverlay: FC<CommentOverlayProps> = ({
   onClose,
   onSubmit,
   onResizeStart,
+  orgName,
 }) => {
   const isDark = theme === "dark";
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [orgMembers, setOrgMembers] = useState<Array<{ login: string; avatar_url: string; name?: string }>>([]);
+  const fetchOrgMembers = useOrgStore((state) => state.fetchOrgMembers);
+
+  useEffect(() => {
+    if (orgName) {
+      fetchOrgMembers(orgName).then((members) => {
+        setOrgMembers(members);
+      });
+    }
+  }, [orgName, fetchOrgMembers]);
+
+  const filteredMentionCandidates = mentionQuery
+    ? orgMembers.filter((candidate) => {
+        const query = mentionQuery.toLowerCase();
+        return (
+          candidate.login.toLowerCase().includes(query) ||
+          (candidate.name?.toLowerCase().includes(query) ?? false)
+        );
+      })
+    : [];
+
+  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    const pos = e.target.selectionStart;
+    onCommentDraftChange(text);
+    setCursorPosition(pos);
+
+    const textBeforeCursor = text.substring(0, pos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      const beforeAt = textBeforeCursor[lastAtIndex - 1];
+      if (lastAtIndex === 0 || /\s/.test(beforeAt)) {
+        const query = textBeforeCursor.substring(lastAtIndex + 1);
+        if (/^\w*$/.test(query)) {
+          setMentionQuery(query);
+          setShowMentionMenu(true);
+          setSelectedMentionIndex(0);
+          return;
+        }
+      }
+    }
+
+    setShowMentionMenu(false);
+    setMentionQuery("");
+  }, [onCommentDraftChange]);
+
+  const handleMention = useCallback((login: string) => {
+    const text = commentDraft;
+    const textBeforeCursor = text.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      const before = text.substring(0, lastAtIndex + 1);
+      const after = text.substring(cursorPosition);
+      const newText = `${before}${login} ${after}`;
+      onCommentDraftChange(newText);
+
+      setShowMentionMenu(false);
+      setMentionQuery("");
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPos = lastAtIndex + login.length + 2;
+          textareaRef.current.selectionStart = newCursorPos;
+          textareaRef.current.selectionEnd = newCursorPos;
+          textareaRef.current.focus();
+        }
+      }, 0);
+    }
+  }, [commentDraft, cursorPosition, onCommentDraftChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMentionMenu && filteredMentionCandidates.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedMentionIndex((prev) =>
+          (prev + 1) % filteredMentionCandidates.length
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedMentionIndex((prev) =>
+          prev === 0 ? filteredMentionCandidates.length - 1 : prev - 1
+        );
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleMention(filteredMentionCandidates[selectedMentionIndex].login);
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowMentionMenu(false);
+        return;
+      }
+    }
+
+    if (e.key === "Enter" && e.metaKey && commentDraft.trim() && !isSubmittingComment) {
+      e.preventDefault();
+      onSubmit();
+    }
+  }, [showMentionMenu, filteredMentionCandidates, selectedMentionIndex, handleMention, commentDraft, isSubmittingComment, onSubmit]);
 
   return (
     <div
@@ -116,7 +229,7 @@ export const CommentOverlay: FC<CommentOverlayProps> = ({
         </button>
       </div>
 
-      <div className="px-3 py-2 flex-1 flex flex-col gap-2 overflow-y-auto min-h-0">
+      <div className="px-3 py-2 flex-1 flex flex-col gap-2 min-h-0 overflow-visible">
         {overlay.type === "thread" && activeThread && (
           <div className="space-y-2 max-h-32 overflow-y-auto pr-1 text-sm">
             {activeThread.comments.map((comment) => (
@@ -178,18 +291,34 @@ export const CommentOverlay: FC<CommentOverlayProps> = ({
           </div>
         ) : (
           <>
-            <div className="flex-1 flex flex-col min-h-0">
-              <CompactMarkdownEditor
+            <div className="flex-1 flex flex-col min-h-0 relative">
+              <textarea
+                ref={textareaRef}
                 value={commentDraft}
-                onChange={(newValue) => onCommentDraftChange(newValue)}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
                 placeholder={
                   overlay.type === "thread"
-                    ? "Reply to this thread..."
-                    : "Leave a comment on this line..."
+                    ? "Reply to this thread... (@ to mention, ⌘↵ to submit)"
+                    : "Leave a comment on this line... (@ to mention, ⌘↵ to submit)"
                 }
                 autoFocus
-                flexible
-                className="flex-1"
+                className={cn(
+                  "w-full flex-1 p-2 resize-none focus:outline-none text-xs rounded-md border",
+                  isDark
+                    ? "bg-gray-900 text-gray-100 placeholder-gray-500 border-gray-700"
+                    : "bg-white text-gray-900 placeholder-gray-400 border-gray-300",
+                )}
+              />
+              <MentionTypeahead
+                value={mentionQuery}
+                candidates={filteredMentionCandidates}
+                onMention={handleMention}
+                theme={isDark ? "dark" : "light"}
+                isOpen={showMentionMenu && filteredMentionCandidates.length > 0}
+                selectedIndex={selectedMentionIndex}
+                onSelectedIndexChange={setSelectedMentionIndex}
+                dropDown
               />
             </div>
 

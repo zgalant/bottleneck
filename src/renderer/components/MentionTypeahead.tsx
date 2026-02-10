@@ -15,6 +15,7 @@ interface MentionTypeaheadProps {
   isOpen: boolean;
   selectedIndex: number;
   onSelectedIndexChange: (index: number) => void;
+  dropDown?: boolean;
 }
 
 export function MentionTypeahead({
@@ -25,6 +26,7 @@ export function MentionTypeahead({
   isOpen,
   selectedIndex,
   onSelectedIndexChange,
+  dropDown = false,
 }: MentionTypeaheadProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const selectedItemRef = useRef<HTMLButtonElement>(null);
@@ -46,7 +48,9 @@ export function MentionTypeahead({
     <div
       ref={listRef}
       className={cn(
-        "absolute bottom-full mb-1 left-0 w-64 rounded-lg border shadow-lg z-50 max-h-64 overflow-y-auto",
+        dropDown
+          ? "absolute top-full mt-1 left-0 w-64 rounded-lg border shadow-lg z-50 max-h-64 overflow-y-auto"
+          : "absolute bottom-full mb-1 left-0 w-64 rounded-lg border shadow-lg z-50 max-h-64 overflow-y-auto",
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200",

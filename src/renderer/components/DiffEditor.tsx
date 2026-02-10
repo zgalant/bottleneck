@@ -37,6 +37,7 @@ interface DiffEditorProps {
   token: string | null;
   currentUser: { login: string; avatar_url?: string } | null;
   onCommentAdded?: (comment: Comment) => void;
+  orgName?: string;
 }
 
 interface CommentMetadata {
@@ -61,6 +62,7 @@ export function DiffEditor({
   token,
   currentUser,
   onCommentAdded,
+  orgName,
 }: DiffEditorProps) {
   const {
     diffView,
@@ -259,6 +261,11 @@ export function DiffEditor({
               lineDiffType: "word",
               disableFileHeader: true,
               hunkSeparators: "line-info",
+              enableHoverUtility: true,
+              onLineNumberClick: (props) => {
+                const side = props.annotationSide;
+                handleLineClick(props.lineNumber, side);
+              },
             }}
             lineAnnotations={lineAnnotations}
             renderAnnotation={(annotation) => (
@@ -277,10 +284,9 @@ export function DiffEditor({
 
               return (
                 <button
-                  className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  className="flex items-center justify-center w-4 h-4 text-[10px] leading-none bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                   onClick={() => {
-                    const side = hoveredLine.annotationSide;
-                    handleLineClick(hoveredLine.lineNumber, side);
+                    handleLineClick(hoveredLine.lineNumber, hoveredLine.side);
                   }}
                 >
                   +
@@ -332,6 +338,7 @@ export function DiffEditor({
               onClose={commentManager.closeOverlay}
               onSubmit={commentManager.handleCommentSubmit}
               onResizeStart={commentManager.handleResizeStart}
+              orgName={orgName}
             />
           )}
       </div>

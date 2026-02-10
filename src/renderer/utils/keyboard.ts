@@ -109,6 +109,13 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
+      // Copy filename (Cmd/Ctrl + Option/Alt + C)
+      if (e.code === "KeyC" && e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("pr-action:copy-filename"));
+        return;
+      }
+
       // Focus comment box (Cmd/Ctrl + Shift + C)
       if ((e.key === "c" || e.key === "C") && e.shiftKey) {
         e.preventDefault();
