@@ -3,7 +3,8 @@ import { usePRStore } from "../stores/prStore";
 import { useStatsStore } from "../stores/statsStore";
 import { useUIStore } from "../stores/uiStore";
 import { cn } from "../utils/cn";
-import { GitPullRequest, Code2, Eye, ArrowUp, ArrowDown, Ship } from "lucide-react";
+import { GitPullRequest, Code2, Eye, ArrowUp, ArrowDown, Ship, TrendingUp } from "lucide-react";
+import { StalenessHistogram } from "../components/stats/StalenessHistogram";
 
 export default function StatsView() {
   const { theme } = useUIStore();
@@ -335,6 +336,23 @@ export default function StatsView() {
             </div>
           )}
 
+          {/* PR Staleness Histogram */}
+          <div className="mt-6 pt-6 border-t" style={{ borderColor: theme === "dark" ? "#555" : "#ddd" }}>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              PR Staleness Distribution
+            </h3>
+            <p
+              className={cn(
+                "text-sm mb-4",
+                theme === "dark" ? "text-gray-400" : "text-gray-600"
+              )}
+            >
+              Shows how many open PRs are in each activity bucket based on their last update time
+            </p>
+            <StalenessHistogram distribution={currentSnapshot.stalenessDistribution} />
+          </div>
+
           {/* Per-Person Current Stats Table */}
           {currentSnapshot.personStats && currentSnapshot.personStats.length > 0 && (
             <div className="mt-6 pt-6 border-t" style={{ borderColor: theme === "dark" ? "#555" : "#ddd" }}>
@@ -452,11 +470,11 @@ export default function StatsView() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
-        </div>
+              </div>
+              )}
+              </div>
 
-        {/* Activity Table */}
+              {/* Activity Table */}
         {activityTableRows.length > 0 && (
           <div
             className={cn(
