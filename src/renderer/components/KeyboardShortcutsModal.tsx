@@ -35,6 +35,7 @@ const SHORTCUTS = [
       { keys: ["Cmd", "Shift", "A"], description: "Go to PR homepage" },
       { keys: ["Cmd", "L"], description: "Add label" },
       { keys: ["Cmd", "Shift", "C"], description: "Focus comment box" },
+      { keys: ["Cmd", "Option", "C"], description: "Copy filename" },
       { keys: ["Cmd", "Shift", "H"], description: "Go to home (PR list)" },
       { keys: ["Cmd", "Shift", "N"], description: "Go to notifications" },
     ],

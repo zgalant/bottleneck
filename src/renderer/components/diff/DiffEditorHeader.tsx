@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import {
   Eye,
   Columns,
@@ -54,15 +54,25 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
+  const showCopiedFeedback = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   const handleCopyFilename = async () => {
     try {
       await navigator.clipboard.writeText(file.filename);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      showCopiedFeedback();
     } catch (err) {
       console.error("Failed to copy:", err);
     }
   };
+
+  useEffect(() => {
+    const onCopyFilename = () => showCopiedFeedback();
+    window.addEventListener("pr-action:copy-filename", onCopyFilename);
+    return () => window.removeEventListener("pr-action:copy-filename", onCopyFilename);
+  }, []);
 
   const isDark = theme === "dark";
   const fullFileTitle = canShowFullFile
@@ -82,7 +92,7 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
       )}
     >
       <div className="flex items-center space-x-3">
-        <h3 className="font-mono text-sm font-semibold flex items-center gap-2 group/filename">
+        <h3 className="font-mono text-sm font-semibold flex items-center gap-2">
           {file.status === "added" && (
             <FilePlus className="w-4 h-4 text-green-600" />
           )}
@@ -97,7 +107,7 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
           </span>
           <button
             onClick={handleCopyFilename}
-            className="btn btn-ghost p-0.5 opacity-0 group-hover/filename:opacity-100 transition-opacity"
+            className="btn btn-ghost p-0.5"
             title="Copy filename"
           >
             {copied ? (

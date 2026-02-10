@@ -389,6 +389,17 @@ export default function CommandPalette() {
         preview: <div>Copy "gh pr checkout {prNumber}" to clipboard</div>,
       });
       cmds.push({
+        id: "copy-filename",
+        name: "Copy Filename",
+        keywords: "copy filename file path clipboard",
+        shortcut: "⌘⌥C",
+        icon: Copy,
+        action: () => {
+          window.dispatchEvent(new CustomEvent("pr-action:copy-filename"));
+        },
+        preview: <div>Copy the currently viewed filename to clipboard</div>,
+      });
+      cmds.push({
         id: "ship-it",
         name: "Ship It",
         keywords: "ship shipit approve label merge ready",
