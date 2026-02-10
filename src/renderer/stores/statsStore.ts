@@ -21,12 +21,28 @@ export interface PersonCurrentStats {
   assignedForReview: number;
 }
 
+export interface StalenessStatus {
+  draft: number;
+  readyForReview: number;
+  approved: number;
+}
+
+export interface StalenessDistribution {
+  '4hours': StalenessStatus;
+  '1day': StalenessStatus;
+  '2days': StalenessStatus;
+  '3days': StalenessStatus;
+  '4to10days': StalenessStatus;
+  '10plus': StalenessStatus;
+}
+
 export interface CurrentSnapshot {
   totalOpen: number;
   totalDraft: number;
   readyToShip: number;
   reviewedByPerson: Map<string, { name: string; avatarUrl?: string; reviewCount: number }>;
   personStats: PersonCurrentStats[];
+  stalenessDistribution: StalenessDistribution;
 }
 
 export interface ActivityPeriod {
@@ -71,6 +87,16 @@ function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): Curre
   let readyToShip = 0;
   const reviewedByPerson = new Map<string, { name: string; avatarUrl?: string; reviewCount: number }>();
   const personStatsMap = new Map<string, PersonCurrentStats>();
+  const stalenessDistribution: StalenessDistribution = {
+    '4hours': { draft: 0, readyForReview: 0, approved: 0 },
+    '1day': { draft: 0, readyForReview: 0, approved: 0 },
+    '2days': { draft: 0, readyForReview: 0, approved: 0 },
+    '3days': { draft: 0, readyForReview: 0, approved: 0 },
+    '4to10days': { draft: 0, readyForReview: 0, approved: 0 },
+    '10plus': { draft: 0, readyForReview: 0, approved: 0 },
+  };
+
+  const now = new Date();
 
   pullRequests.forEach((pr) => {
     // Count current open and draft PRs
@@ -91,6 +117,39 @@ function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): Curre
 
       if (hasApproval || hasShipitLabel) {
         readyToShip++;
+      }
+
+      // Categorize by staleness based on last update
+      const lastUpdated = new Date(pr.updated_at);
+      const hoursAgo = (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
+      const daysAgo = hoursAgo / 24;
+
+      // Determine PR status
+      const hasApprovalForStatus =
+        pr.review_decision === 'approved' ||
+        (Array.isArray(pr.approvedBy) && pr.approvedBy.length > 0);
+
+      let bucket: keyof StalenessDistribution;
+      if (hoursAgo <= 4) {
+        bucket = '4hours';
+      } else if (daysAgo <= 1) {
+        bucket = '1day';
+      } else if (daysAgo <= 2) {
+        bucket = '2days';
+      } else if (daysAgo <= 3) {
+        bucket = '3days';
+      } else if (daysAgo <= 10) {
+        bucket = '4to10days';
+      } else {
+        bucket = '10plus';
+      }
+
+      if (pr.draft) {
+        stalenessDistribution[bucket].draft++;
+      } else if (hasApprovalForStatus) {
+        stalenessDistribution[bucket].approved++;
+      } else {
+        stalenessDistribution[bucket].readyForReview++;
       }
 
       // Count per-person open/draft stats
@@ -172,6 +231,7 @@ function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): Curre
     readyToShip,
     reviewedByPerson,
     personStats,
+    stalenessDistribution,
   };
 }
 
