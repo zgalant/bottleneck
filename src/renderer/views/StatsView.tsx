@@ -131,7 +131,7 @@ export default function StatsView() {
     return (
       <div
         className={cn(
-          "flex-1 overflow-auto flex items-center justify-center",
+          "flex-1 flex items-center justify-center",
           theme === "dark" ? "bg-gray-900" : "bg-white"
         )}
       >
@@ -145,14 +145,14 @@ export default function StatsView() {
   return (
     <div
       className={cn(
-        "flex-1 flex flex-col overflow-hidden min-h-0",
+        "h-full flex flex-col",
         theme === "dark" ? "bg-gray-900 text-gray-100" : "bg-white text-gray-900"
       )}
     >
-      {/* Sticky Header */}
+      {/* Header */}
       <div
         className={cn(
-          "sticky top-0 z-10 p-6 border-b",
+          "sticky top-0 z-10 p-6 border-b flex-shrink-0",
           theme === "dark"
             ? "bg-gray-900 border-gray-700"
             : "bg-white border-gray-200"
@@ -170,7 +170,7 @@ export default function StatsView() {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-6 max-w-7xl mx-auto space-y-6">
 
         {/* Current Snapshot */}
@@ -253,12 +253,12 @@ export default function StatsView() {
                     theme === "dark" ? "text-yellow-400" : "text-yellow-600"
                   )}
                 >
-                  {currentSnapshot.totalOpen}
+                  {currentSnapshot.open}
                 </p>
               </div>
             </div>
 
-            {/* Draft PRs Card */}
+            {/* Needs Review Card */}
             <div
               className={cn(
                 "p-4 rounded-lg border flex items-center gap-4",
@@ -268,10 +268,10 @@ export default function StatsView() {
               )}
             >
               <div>
-                <GitPullRequest
+                <Eye
                   className={cn(
                     "w-10 h-10",
-                    theme === "dark" ? "text-gray-400" : "text-gray-600"
+                    theme === "dark" ? "text-blue-400" : "text-blue-600"
                   )}
                 />
               </div>
@@ -282,177 +282,179 @@ export default function StatsView() {
                     theme === "dark" ? "text-gray-400" : "text-gray-600"
                   )}
                 >
-                  Draft PRs
+                  Needs Review
                 </p>
                 <p
                   className={cn(
                     "text-3xl font-bold mt-1",
-                    theme === "dark" ? "text-gray-400" : "text-gray-600"
+                    theme === "dark" ? "text-blue-400" : "text-blue-600"
                   )}
                 >
-                  {currentSnapshot.totalDraft}
+                  {currentSnapshot.needsReview}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Reviewed By */}
-           {reviewedByPersonArray.length > 0 && (
-             <div className="mt-6 pt-6 border-t border-gray-700">
-               <h3 className="text-lg font-semibold mb-3">Reviewed By (Current)</h3>
-               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                 {reviewedByPersonArray.map((person) => (
-                   <div
-                     key={person.name}
-                     className={cn(
-                       "p-3 rounded-lg border text-center",
-                       theme === "dark"
-                         ? "bg-gray-900 border-gray-600"
-                         : "bg-white border-gray-200"
-                     )}
-                   >
-                     {person.avatarUrl && (
-                       <img
-                         src={person.avatarUrl}
-                         alt={person.name}
-                         className="w-8 h-8 rounded-full mx-auto mb-2"
-                       />
-                     )}
-                     <p className="text-sm font-medium">{person.name}</p>
-                     <p
-                       className={cn(
-                         "text-lg font-bold mt-1",
-                         theme === "dark" ? "text-blue-400" : "text-blue-600"
-                       )}
-                     >
-                       {person.reviewCount}
-                     </p>
-                   </div>
-                 ))}
-               </div>
-             </div>
-           )}
+          {/* Reviewer Stats Section */}
+          {reviewedByPersonArray.length > 0 && (
+            <div className="mt-6 pt-6 border-t" style={{ borderColor: theme === "dark" ? "#555" : "#ddd" }}>
+              <h3 className="text-lg font-semibold mb-3">Reviewer Stats</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {reviewedByPersonArray.map((person) => (
+                  <div
+                    key={person.login}
+                    className={cn(
+                      "p-3 rounded border",
+                      theme === "dark"
+                        ? "bg-gray-900 border-gray-600"
+                        : "bg-white border-gray-200"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {person.avatarUrl && (
+                        <img
+                          src={person.avatarUrl}
+                          alt={person.name}
+                          className="w-5 h-5 rounded-full"
+                        />
+                      )}
+                      <span className="font-medium text-sm">{person.name}</span>
+                    </div>
+                    <p
+                      className={cn(
+                        "text-2xl font-bold",
+                        theme === "dark" ? "text-blue-400" : "text-blue-600"
+                      )}
+                    >
+                      {person.reviewCount}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-           {/* Per-Person Current Stats Table */}
-           {currentSnapshot.personStats && currentSnapshot.personStats.length > 0 && (
-             <div className="mt-6 pt-6 border-t" style={{ borderColor: theme === "dark" ? "#555" : "#ddd" }}>
-               <h3 className="text-lg font-semibold mb-3">Per-Person Current Stats</h3>
-               <div className="overflow-x-auto">
-                 <table className="w-full text-sm">
-                   <thead>
-                     <tr
-                       className={cn(
-                         "border-b",
-                         theme === "dark" ? "border-gray-700" : "border-gray-200"
-                       )}
-                     >
-                       <th
-                         className={cn(
-                           "text-left py-3 px-4 font-semibold",
-                           theme === "dark" ? "text-gray-400" : "text-gray-600"
-                         )}
-                       >
-                         Person
-                       </th>
-                       <th
-                         className={cn(
-                           "text-right py-3 px-4 font-semibold",
-                           theme === "dark" ? "text-gray-400" : "text-gray-600"
-                         )}
-                       >
-                         Open
-                       </th>
-                       <th
-                         className={cn(
-                           "text-right py-3 px-4 font-semibold",
-                           theme === "dark" ? "text-gray-400" : "text-gray-600"
-                         )}
-                       >
-                         Draft
-                       </th>
-                       <th
-                         className={cn(
-                           "text-right py-3 px-4 font-semibold",
-                           theme === "dark" ? "text-gray-400" : "text-gray-600"
-                         )}
-                       >
-                         Assigned for Review
-                       </th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {currentSnapshot.personStats.map((person) => (
-                       <tr
-                         key={person.login}
-                         className={cn(
-                           "border-b transition-colors",
-                           theme === "dark"
-                             ? "border-gray-700 hover:bg-gray-700/50"
-                             : "border-gray-200 hover:bg-gray-50"
-                         )}
-                       >
-                         <td className="py-3 px-4">
-                           <div className="flex items-center gap-2">
-                             {person.avatarUrl && (
-                               <img
-                                 src={person.avatarUrl}
-                                 alt={person.name}
-                                 className="w-6 h-6 rounded-full"
-                               />
-                             )}
-                             <span className="font-medium">{person.name}</span>
-                           </div>
-                         </td>
-                         <td
-                           className={cn(
-                             "text-right py-3 px-4 font-semibold",
-                             person.open > 0
-                               ? theme === "dark"
-                                 ? "text-yellow-400"
-                                 : "text-yellow-600"
-                               : theme === "dark"
-                                 ? "text-gray-500"
-                                 : "text-gray-400"
-                           )}
-                         >
-                           {person.open}
-                         </td>
-                         <td
-                           className={cn(
-                             "text-right py-3 px-4 font-semibold",
-                             person.draft > 0
-                               ? theme === "dark"
-                                 ? "text-purple-400"
-                                 : "text-purple-600"
-                               : theme === "dark"
-                                 ? "text-gray-500"
-                                 : "text-gray-400"
-                           )}
-                         >
-                           {person.draft}
-                         </td>
-                         <td
-                           className={cn(
-                             "text-right py-3 px-4 font-semibold",
-                             person.assignedForReview > 0
-                               ? theme === "dark"
-                                 ? "text-blue-400"
-                                 : "text-blue-600"
-                               : theme === "dark"
-                                 ? "text-gray-500"
-                                 : "text-gray-400"
-                           )}
-                         >
-                           {person.assignedForReview}
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </div>
-             </div>
-           )}
-          </div>
+          {/* Per-Person Current Stats Table */}
+          {currentSnapshot.personStats && currentSnapshot.personStats.length > 0 && (
+            <div className="mt-6 pt-6 border-t" style={{ borderColor: theme === "dark" ? "#555" : "#ddd" }}>
+              <h3 className="text-lg font-semibold mb-3">Per-Person Current Stats</h3>
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-sm whitespace-nowrap">
+                  <thead>
+                    <tr
+                      className={cn(
+                        "border-b",
+                        theme === "dark" ? "border-gray-700" : "border-gray-200"
+                      )}
+                    >
+                      <th
+                        className={cn(
+                          "text-left py-3 px-4 font-semibold",
+                          theme === "dark" ? "text-gray-400" : "text-gray-600"
+                        )}
+                      >
+                        Name
+                      </th>
+                      <th
+                        className={cn(
+                          "text-right py-3 px-4 font-semibold",
+                          theme === "dark" ? "text-gray-400" : "text-gray-600"
+                        )}
+                      >
+                        Open
+                      </th>
+                      <th
+                        className={cn(
+                          "text-right py-3 px-4 font-semibold",
+                          theme === "dark" ? "text-gray-400" : "text-gray-600"
+                        )}
+                      >
+                        Draft
+                      </th>
+                      <th
+                        className={cn(
+                          "text-right py-3 px-4 font-semibold",
+                          theme === "dark" ? "text-gray-400" : "text-gray-600"
+                        )}
+                      >
+                        Assigned for Review
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentSnapshot.personStats.map((person) => (
+                      <tr
+                        key={person.login}
+                        className={cn(
+                          "border-b transition-colors",
+                          theme === "dark"
+                            ? "border-gray-700 hover:bg-gray-700/50"
+                            : "border-gray-200 hover:bg-gray-50"
+                        )}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {person.avatarUrl && (
+                              <img
+                                src={person.avatarUrl}
+                                alt={person.name}
+                                className="w-6 h-6 rounded-full"
+                              />
+                            )}
+                            <span className="font-medium">{person.name}</span>
+                          </div>
+                        </td>
+                        <td
+                          className={cn(
+                            "text-right py-3 px-4 font-semibold",
+                            person.open > 0
+                              ? theme === "dark"
+                                ? "text-yellow-400"
+                                : "text-yellow-600"
+                              : theme === "dark"
+                                ? "text-gray-500"
+                                : "text-gray-400"
+                          )}
+                        >
+                          {person.open}
+                        </td>
+                        <td
+                          className={cn(
+                            "text-right py-3 px-4 font-semibold",
+                            person.draft > 0
+                              ? theme === "dark"
+                                ? "text-purple-400"
+                                : "text-purple-600"
+                              : theme === "dark"
+                                ? "text-gray-500"
+                                : "text-gray-400"
+                          )}
+                        >
+                          {person.draft}
+                        </td>
+                        <td
+                          className={cn(
+                            "text-right py-3 px-4 font-semibold",
+                            person.assignedForReview > 0
+                              ? theme === "dark"
+                                ? "text-blue-400"
+                                : "text-blue-600"
+                              : theme === "dark"
+                                ? "text-gray-500"
+                                : "text-gray-400"
+                          )}
+                        >
+                          {person.assignedForReview}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Activity Table */}
         {activityTableRows.length > 0 && (
@@ -469,8 +471,8 @@ export default function StatsView() {
               Recent Activity
             </h2>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr
                     className={cn(
