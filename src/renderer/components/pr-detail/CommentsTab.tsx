@@ -13,6 +13,22 @@ import { ReviewThread } from "../../services/github";
 import { CompactMarkdownEditor } from "../CompactMarkdownEditor";
 import { Markdown } from "../Markdown";
 import { DeleteCommentDialog } from "./DeleteCommentDialog";
+import { AgentPromptBlock, parseAgentPrompt, isAgentUser } from "../AgentPromptBlock";
+
+/**
+ * Renders agent comments with special formatting for "Prompt for agents" sections
+ */
+function AgentCommentContent({ body }: { body: string }) {
+  const { beforeContent, prompt, afterContent } = parseAgentPrompt(body);
+
+  return (
+    <>
+      {beforeContent && <Markdown content={beforeContent} variant="full" />}
+      {prompt && <AgentPromptBlock prompt={prompt} />}
+      {afterContent && <Markdown content={afterContent} variant="full" />}
+    </>
+  );
+}
 
 interface CommentsTabProps {
   threads: ReviewThread[];
@@ -404,12 +420,16 @@ export function CommentsTab({
                                </div>
                              )}
                            </div>
-                           <div className={cn(
-                             "mt-2 text-sm overflow-hidden",
-                             isDark ? "text-gray-300" : "text-gray-700"
-                           )}>
-                             <Markdown content={comment.body} variant="full" />
-                           </div>
+                          <div className={cn(
+                            "mt-2 text-sm overflow-hidden",
+                            isDark ? "text-gray-300" : "text-gray-700"
+                          )}>
+                            {isAgentUser(comment.user.login) ? (
+                              <AgentCommentContent body={comment.body} />
+                            ) : (
+                              <Markdown content={comment.body} variant="full" />
+                            )}
+                          </div>
                          </div>
                        </div>
                      );
