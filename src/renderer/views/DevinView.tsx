@@ -1,13 +1,17 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
 import {
   RefreshCw,
   MessageSquare,
   GitPullRequest,
-  ExternalLink,
+  ArrowRight,
   AlertCircle,
   Inbox,
+  Terminal,
+  Check,
+  Copy,
 } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
 import { useDevinStore, DevinComment } from "../stores/devinStore";
@@ -28,7 +32,21 @@ function DevinCommentCard({
   onNavigate: (owner: string, repo: string, prNumber: number) => void;
 }) {
   const isDark = theme === "dark";
+  const [copiedCheckout, setCopiedCheckout] = useState(false);
   const { beforeContent, prompt } = parseAgentPrompt(item.comment.body);
+
+  const checkoutCommand = `gh pr checkout ${item.pr.number} --repo ${item.pr.owner}/${item.pr.repo}`;
+
+  const handleCopyCheckout = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(checkoutCommand);
+      setCopiedCheckout(true);
+      setTimeout(() => setCopiedCheckout(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   // Truncate beforeContent for preview
   const previewContent = beforeContent.length > 300
@@ -87,18 +105,39 @@ function DevinCommentCard({
             </div>
           </div>
         </div>
-        <button
-          onClick={() => onNavigate(item.pr.owner, item.pr.repo, item.pr.number)}
-          className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors flex-shrink-0",
-            isDark
-              ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-              : "bg-blue-50 text-blue-700 hover:bg-blue-100",
-          )}
-        >
-          <ExternalLink className="w-3 h-3" />
-          <span>View PR</span>
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleCopyCheckout}
+            title={checkoutCommand}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors",
+              copiedCheckout
+                ? "bg-green-500/20 text-green-300"
+                : isDark
+                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200",
+            )}
+          >
+            {copiedCheckout ? (
+              <Check className="w-3 h-3" />
+            ) : (
+              <Terminal className="w-3 h-3" />
+            )}
+            <span>{copiedCheckout ? "Copied!" : "Checkout"}</span>
+          </button>
+          <button
+            onClick={() => onNavigate(item.pr.owner, item.pr.repo, item.pr.number)}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors",
+              isDark
+                ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
+                : "bg-blue-50 text-blue-700 hover:bg-blue-100",
+            )}
+          >
+            <ArrowRight className="w-3 h-3" />
+            <span>View PR</span>
+          </button>
+        </div>
       </div>
 
       {/* Comment Content */}
