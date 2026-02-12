@@ -1,6 +1,8 @@
 import { create } from "zustand";
-import { GitHubAPI, ReviewThread, Comment, PullRequest } from "../services/github";
+import { GitHubAPI, ReviewThread, Comment } from "../services/github";
 import { isAgentUser, parseAgentPrompt } from "../components/AgentPromptBlock";
+import { useAuthStore } from "./authStore";
+import { usePRStore } from "./prStore";
 
 export interface DevinComment {
   id: string;
@@ -47,8 +49,7 @@ export const useDevinStore = create<DevinState>((set, get) => ({
       if (window.electron) {
         token = await window.electron.auth.getToken();
       } else {
-        const authStore = require("./authStore").useAuthStore.getState();
-        token = authStore.token;
+        token = useAuthStore.getState().token;
       }
 
       if (!token) {
@@ -64,8 +65,7 @@ export const useDevinStore = create<DevinState>((set, get) => ({
       const api = new GitHubAPI(token);
 
       // Get recently viewed repos from prStore
-      const prStore = require("./prStore").usePRStore.getState();
-      const recentRepos = prStore.recentlyViewedRepos || [];
+      const recentRepos = usePRStore.getState().recentlyViewedRepos || [];
 
       if (recentRepos.length === 0) {
         set({ comments: [], loading: false, lastFetched: Date.now() });
