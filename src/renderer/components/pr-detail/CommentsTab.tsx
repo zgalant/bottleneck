@@ -7,6 +7,8 @@ import {
   Filter,
   MoreVertical,
   Trash2,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { ReviewThread } from "../../services/github";
@@ -38,6 +40,10 @@ interface CommentsTabProps {
   onReply: (threadId: string, commentId: number, body: string) => Promise<void>;
   onResolve: (threadId: string) => Promise<void>;
   onDeleteComment: (commentId: number) => Promise<void>;
+  onToggleReaction: (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => Promise<void>;
 }
 
 export function CommentsTab({
@@ -48,6 +54,7 @@ export function CommentsTab({
   onReply,
   onResolve,
   onDeleteComment,
+  onToggleReaction,
 }: CommentsTabProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [openReplyThreads, setOpenReplyThreads] = useState<string[]>([]);
@@ -163,6 +170,18 @@ export function CommentsTab({
       alert("Failed to resolve thread. Please try again.");
     } finally {
       setResolvingThreadId(null);
+    }
+  };
+
+  const handleToggleReaction = async (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => {
+    try {
+      await onToggleReaction(commentId, reaction);
+    } catch (error) {
+      console.error("Failed to toggle reaction", error);
+      alert("Failed to toggle reaction. Please try again.");
     }
   };
 
@@ -352,6 +371,9 @@ export function CommentsTab({
                       ? formatDistanceToNow(commentDate!, { addSuffix: true })
                       : "recently";
                     const isAuthor = currentUser?.login === comment.user.login;
+                    const hasThumbsUp = comment.hasThumbsUp ?? false;
+                    const hasThumbsDown = comment.hasThumbsDown ?? false;
+                    const isUpdatingReaction = comment.isPerformingOperation ?? false;
 
                     return (
                        <div key={comment.id} className="flex gap-3">
@@ -380,45 +402,109 @@ export function CommentsTab({
                                  {relativeTime}
                                </span>
                              </div>
-                             {isAuthor && (
-                               <div className="relative" ref={openMenuCommentId === comment.id ? menuRef : undefined}>
-                                 <button
-                                   onClick={() => setOpenMenuCommentId(
-                                     openMenuCommentId === comment.id ? null : comment.id
-                                   )}
-                                   className={cn(
-                                     "p-1 rounded transition-colors",
-                                     isDark
-                                       ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
-                                       : "hover:bg-gray-100 text-gray-600 hover:text-gray-800",
-                                   )}
-                                 >
-                                   <MoreVertical className="w-4 h-4" />
-                                 </button>
+                             <div className="flex items-center gap-1">
+                               <button
+                                 onClick={() => handleToggleReaction(comment.id, "thumbs_up")}
+                                 disabled={isUpdatingReaction}
+                                 title={
+                                   isUpdatingReaction
+                                     ? "Updating reaction..."
+                                     : hasThumbsUp
+                                       ? "Thumbs-up added"
+                                       : "Add thumbs-up reaction"
+                                 }
+                                 aria-label="Toggle thumbs-up reaction"
+                                 className={cn(
+                                   "p-1.5 rounded border transition-colors",
+                                   isDark
+                                     ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                                     : "border-gray-200 text-gray-600 hover:bg-gray-100",
+                                   hasThumbsUp &&
+                                     (isDark
+                                       ? "border-blue-500/70 text-blue-300"
+                                       : "border-blue-300 text-blue-600"),
+                                   isUpdatingReaction &&
+                                     (isDark
+                                       ? "opacity-50 cursor-not-allowed"
+                                       : "opacity-60 cursor-not-allowed"),
+                                 )}
+                               >
+                                 <ThumbsUp className="w-3 h-3" />
+                               </button>
+                               <button
+                                 onClick={() => handleToggleReaction(comment.id, "thumbs_down")}
+                                 disabled={isUpdatingReaction}
+                                 title={
+                                   isUpdatingReaction
+                                     ? "Updating reaction..."
+                                     : hasThumbsDown
+                                       ? "Thumbs-down added"
+                                       : "Add thumbs-down reaction"
+                                 }
+                                 aria-label="Toggle thumbs-down reaction"
+                                 className={cn(
+                                   "p-1.5 rounded border transition-colors",
+                                   isDark
+                                     ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                                     : "border-gray-200 text-gray-600 hover:bg-gray-100",
+                                   hasThumbsDown &&
+                                     (isDark
+                                       ? "border-red-500/70 text-red-300"
+                                       : "border-red-300 text-red-600"),
+                                   isUpdatingReaction &&
+                                     (isDark
+                                       ? "opacity-50 cursor-not-allowed"
+                                       : "opacity-60 cursor-not-allowed"),
+                                 )}
+                               >
+                                 <ThumbsDown className="w-3 h-3" />
+                               </button>
 
-                                 {openMenuCommentId === comment.id && (
-                                   <div
+                               {isAuthor && (
+                                 <div
+                                   className="relative"
+                                   ref={openMenuCommentId === comment.id ? menuRef : undefined}
+                                 >
+                                   <button
+                                     onClick={() =>
+                                       setOpenMenuCommentId(
+                                         openMenuCommentId === comment.id ? null : comment.id,
+                                       )
+                                     }
                                      className={cn(
-                                       "absolute right-0 mt-1 py-1 rounded shadow-lg z-10 min-w-[120px]",
+                                       "p-1 rounded transition-colors",
                                        isDark
-                                         ? "bg-gray-700 border border-gray-600"
-                                         : "bg-white border border-gray-200",
+                                         ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
+                                         : "hover:bg-gray-100 text-gray-600 hover:text-gray-800",
                                      )}
                                    >
-                                     <button
-                                       onClick={() => handleDeleteClick(comment.id)}
+                                     <MoreVertical className="w-4 h-4" />
+                                   </button>
+
+                                   {openMenuCommentId === comment.id && (
+                                     <div
                                        className={cn(
-                                         "flex items-center space-x-2 px-3 py-1.5 w-full text-left text-sm transition-colors",
-                                         "text-red-500 hover:bg-red-500 hover:text-white",
+                                         "absolute right-0 mt-1 py-1 rounded shadow-lg z-10 min-w-[120px]",
+                                         isDark
+                                           ? "bg-gray-700 border border-gray-600"
+                                           : "bg-white border border-gray-200",
                                        )}
                                      >
-                                       <Trash2 className="w-3 h-3" />
-                                       <span>Delete</span>
-                                     </button>
-                                   </div>
-                                 )}
-                               </div>
-                             )}
+                                       <button
+                                         onClick={() => handleDeleteClick(comment.id)}
+                                         className={cn(
+                                           "flex items-center space-x-2 px-3 py-1.5 w-full text-left text-sm transition-colors",
+                                           "text-red-500 hover:bg-red-500 hover:text-white",
+                                         )}
+                                       >
+                                         <Trash2 className="w-3 h-3" />
+                                         <span>Delete</span>
+                                       </button>
+                                     </div>
+                                   )}
+                                 </div>
+                               )}
+                             </div>
                            </div>
                           <div className={cn(
                             "mt-2 text-sm overflow-hidden",

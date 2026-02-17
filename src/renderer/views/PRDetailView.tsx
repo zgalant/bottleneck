@@ -39,6 +39,63 @@ import {
 } from "../components/pr-detail";
 import { useSyncStore } from "../stores/syncStore";
 
+interface CommentReactionCacheEntry {
+  hasThumbsUp: boolean;
+  hasThumbsDown: boolean;
+  nodeId?: string;
+  updatedAt: number;
+}
+
+type CommentReactionCache = Record<string, CommentReactionCacheEntry>;
+
+const COMMENT_REACTION_CACHE_KEY = "commentReactionCache.v1";
+const COMMENT_REACTION_CACHE_MAX_ENTRIES = 5000;
+const COMMENT_REACTION_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+const buildCommentReactionCacheKey = (
+  repoOwner: string,
+  repoName: string,
+  pullNumber: number,
+  commentId: number,
+) => `${repoOwner}/${repoName}#${pullNumber}:${commentId}`;
+
+const pruneCommentReactionCache = (
+  cache: CommentReactionCache,
+): CommentReactionCache => {
+  const now = Date.now();
+  const entries = Object.entries(cache)
+    .filter(([, entry]) => now - entry.updatedAt <= COMMENT_REACTION_CACHE_TTL_MS)
+    .sort((a, b) => b[1].updatedAt - a[1].updatedAt)
+    .slice(0, COMMENT_REACTION_CACHE_MAX_ENTRIES);
+
+  return Object.fromEntries(entries);
+};
+
+const loadCommentReactionCache = (): CommentReactionCache => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(COMMENT_REACTION_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as CommentReactionCache;
+    return pruneCommentReactionCache(parsed);
+  } catch (error) {
+    console.error("Failed to load comment reaction cache:", error);
+    return {};
+  }
+};
+
+const saveCommentReactionCache = (cache: CommentReactionCache) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      COMMENT_REACTION_CACHE_KEY,
+      JSON.stringify(pruneCommentReactionCache(cache)),
+    );
+  } catch (error) {
+    console.error("Failed to save comment reaction cache:", error);
+  }
+};
+
 export default function PRDetailView() {
   const { owner, repo, number } = useParams<{
     owner: string;
@@ -101,6 +158,117 @@ export default function PRDetailView() {
   const [requestChangesFeedback, setRequestChangesFeedback] = useState("");
   const [isResyncing, setIsResyncing] = useState(false);
   const conversationTabRef = useRef<ConversationTabRef>(null);
+  const reactionCacheRef = useRef<CommentReactionCache>(loadCommentReactionCache());
+
+  const writeReactionCacheEntry = useCallback(
+    (
+      repoOwner: string,
+      repoName: string,
+      pullNumber: number,
+      comment: Pick<
+        Comment,
+        "id" | "node_id" | "hasThumbsUp" | "hasThumbsDown"
+      >,
+    ) => {
+      const key = buildCommentReactionCacheKey(
+        repoOwner,
+        repoName,
+        pullNumber,
+        comment.id,
+      );
+      const existing = reactionCacheRef.current[key];
+      reactionCacheRef.current = {
+        ...reactionCacheRef.current,
+        [key]: {
+          hasThumbsUp: comment.hasThumbsUp ?? false,
+          hasThumbsDown: comment.hasThumbsDown ?? false,
+          nodeId: comment.node_id ?? existing?.nodeId,
+          updatedAt: Date.now(),
+        },
+      };
+      saveCommentReactionCache(reactionCacheRef.current);
+    },
+    [],
+  );
+
+  const applyReactionCacheToComment = useCallback(
+    (
+      repoOwner: string,
+      repoName: string,
+      pullNumber: number,
+      comment: Comment,
+    ): Comment => {
+      const key = buildCommentReactionCacheKey(
+        repoOwner,
+        repoName,
+        pullNumber,
+        comment.id,
+      );
+      const cached = reactionCacheRef.current[key];
+
+      if (!cached) {
+        return {
+          ...comment,
+          hasThumbsUp: comment.hasThumbsUp ?? false,
+          hasThumbsDown: comment.hasThumbsDown ?? false,
+        };
+      }
+
+      return {
+        ...comment,
+        node_id: comment.node_id ?? cached.nodeId,
+        hasThumbsUp: cached.hasThumbsUp,
+        hasThumbsDown: cached.hasThumbsDown,
+      };
+    },
+    [],
+  );
+
+  const applyReactionCacheToComments = useCallback(
+    (
+      repoOwner: string,
+      repoName: string,
+      pullNumber: number,
+      sourceComments: Comment[],
+    ): Comment[] =>
+      sourceComments.map((comment) =>
+        applyReactionCacheToComment(repoOwner, repoName, pullNumber, comment),
+      ),
+    [applyReactionCacheToComment],
+  );
+
+  const applyReactionCacheToThreads = useCallback(
+    (
+      repoOwner: string,
+      repoName: string,
+      pullNumber: number,
+      sourceThreads: ReviewThread[],
+    ): ReviewThread[] =>
+      sourceThreads.map((thread) => ({
+        ...thread,
+        comments: applyReactionCacheToComments(
+          repoOwner,
+          repoName,
+          pullNumber,
+          thread.comments,
+        ),
+      })),
+    [applyReactionCacheToComments],
+  );
+
+  const cacheReactionStatesForComments = useCallback(
+    (
+      repoOwner: string,
+      repoName: string,
+      pullNumber: number,
+      sourceComments: Comment[],
+    ) => {
+      sourceComments.forEach((comment) => {
+        writeReactionCacheEntry(repoOwner, repoName, pullNumber, comment);
+      });
+    },
+    [writeReactionCacheEntry],
+  );
 
   // Listen for PR action events from command palette
   useEffect(() => {
@@ -510,12 +678,31 @@ export default function PRDetailView() {
           updatePR(mockPR as any);
         }
 
+        const cachedMockComments = applyReactionCacheToComments(
+          owner,
+          repo,
+          prNumber,
+          mockComments as any,
+        );
+        const cachedMockReviewComments = applyReactionCacheToComments(
+          owner,
+          repo,
+          prNumber,
+          mockReviewComments as any,
+        );
+        const cachedMockReviewThreads = applyReactionCacheToThreads(
+          owner,
+          repo,
+          prNumber,
+          mockReviewThreads as any,
+        );
+
         setFiles(mockFiles as any);
-        setComments(mockComments as any);
+        setComments(cachedMockComments);
         setCommits([]);
         setReviews(mockReviews as any);
-        setReviewComments(mockReviewComments as any);
-        setReviewThreads(mockReviewThreads as any);
+        setReviewComments(cachedMockReviewComments);
+        setReviewThreads(cachedMockReviewThreads);
 
         if (mockFiles.length > 0) {
           setSelectedFile(mockFiles[0] as any);
@@ -553,14 +740,42 @@ export default function PRDetailView() {
           };
         }
 
+        const cachedConversationComments = applyReactionCacheToComments(
+          owner,
+          repo,
+          prNumber,
+          commentsData,
+        );
+        const cachedReviewComments = applyReactionCacheToComments(
+          owner,
+          repo,
+          prNumber,
+          reviewCommentsData,
+        );
+        const cachedReviewThreads = applyReactionCacheToThreads(
+          owner,
+          repo,
+          prNumber,
+          reviewThreadsData,
+        );
+
         setPR(mergedPR);
         updatePR(mergedPR);
         setFiles(filesData);
-        setComments(commentsData);
+        setComments(cachedConversationComments);
         setCommits(commitsData);
         setReviews(reviewsData);
-        setReviewComments(reviewCommentsData);
-        setReviewThreads(reviewThreadsData);
+        setReviewComments(cachedReviewComments);
+        setReviewThreads(cachedReviewThreads);
+
+        cacheReactionStatesForComments(owner, repo, prNumber, cachedConversationComments);
+        cacheReactionStatesForComments(owner, repo, prNumber, cachedReviewComments);
+        cacheReactionStatesForComments(
+          owner,
+          repo,
+          prNumber,
+          cachedReviewThreads.flatMap((thread) => thread.comments),
+        );
 
         // If we don't have navigation state yet, try to fetch sibling PRs
         if (!navigationState?.siblingPRs) {
@@ -695,6 +910,138 @@ export default function PRDetailView() {
     setReviewComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
+  const handleToggleReviewCommentReaction = async (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => {
+    if (!token) {
+      throw new Error("Sign in with GitHub to add reactions.");
+    }
+
+    const { repoOwner, repoName, pullNumber } = resolveRepoContext();
+    const api = new GitHubAPI(token);
+    const targetComment =
+      reviewThreads
+        .flatMap((thread) => thread.comments)
+        .find((comment) => comment.id === commentId) ??
+      reviewComments.find((comment) => comment.id === commentId);
+
+    if (!targetComment?.node_id) {
+      throw new Error("Unable to update reaction for this comment.");
+    }
+
+    const currentHasThumbsUp = targetComment.hasThumbsUp ?? false;
+    const currentHasThumbsDown = targetComment.hasThumbsDown ?? false;
+    const nextHasThumbsUp =
+      reaction === "thumbs_up" ? !currentHasThumbsUp : false;
+    const nextHasThumbsDown =
+      reaction === "thumbs_down" ? !currentHasThumbsDown : false;
+
+    // Step 1: optimistic update + loading state on comment objects
+    setReviewThreads((prev) =>
+      prev.map((thread) => ({
+        ...thread,
+        comments: thread.comments.map((comment) =>
+          comment.id === commentId
+            ? {
+              ...comment,
+              hasThumbsUp: nextHasThumbsUp,
+              hasThumbsDown: nextHasThumbsDown,
+              isPerformingOperation: true,
+            }
+            : comment,
+        ),
+      })),
+    );
+    setReviewComments((prev) =>
+      prev.map((comment) =>
+        comment.id === commentId
+          ? {
+            ...comment,
+            hasThumbsUp: nextHasThumbsUp,
+            hasThumbsDown: nextHasThumbsDown,
+            isPerformingOperation: true,
+          }
+          : comment,
+      ),
+    );
+    writeReactionCacheEntry(repoOwner, repoName, pullNumber, {
+      id: commentId,
+      node_id: targetComment.node_id,
+      hasThumbsUp: nextHasThumbsUp,
+      hasThumbsDown: nextHasThumbsDown,
+    });
+
+    try {
+      // Step 2: call GitHub
+      if (reaction === "thumbs_up") {
+        if (currentHasThumbsUp) {
+          await api.removeReactionFromSubject(targetComment.node_id, "THUMBS_UP");
+        } else {
+          if (currentHasThumbsDown) {
+            await api.removeReactionFromSubject(
+              targetComment.node_id,
+              "THUMBS_DOWN",
+            );
+          }
+          await api.addReactionToSubject(targetComment.node_id, "THUMBS_UP");
+        }
+      } else if (currentHasThumbsDown) {
+        await api.removeReactionFromSubject(targetComment.node_id, "THUMBS_DOWN");
+      } else {
+        if (currentHasThumbsUp) {
+          await api.removeReactionFromSubject(targetComment.node_id, "THUMBS_UP");
+        }
+        await api.addReactionToSubject(targetComment.node_id, "THUMBS_DOWN");
+      }
+
+      // Step 3: clear loading; optimistic state is already applied
+      setReviewThreads((prev) =>
+        prev.map((thread) => ({
+          ...thread,
+          comments: thread.comments.map((comment) =>
+            comment.id === commentId
+              ? {
+                ...comment,
+                isPerformingOperation: false,
+              }
+              : comment,
+          ),
+        })),
+      );
+      setReviewComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId
+            ? {
+              ...comment,
+              isPerformingOperation: false,
+            }
+            : comment,
+        ),
+      );
+    } catch (error) {
+      // Step 4: on error, revert loading only
+      setReviewThreads((prev) =>
+        prev.map((thread) => ({
+          ...thread,
+          comments: thread.comments.map((comment) =>
+            comment.id === commentId
+              ? { ...comment, isPerformingOperation: false }
+              : comment,
+          ),
+        })),
+      );
+      setReviewComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId
+            ? { ...comment, isPerformingOperation: false }
+            : comment,
+        ),
+      );
+      throw error;
+    }
+  };
+
   const handleDeleteConversationComment = async (commentId: number) => {
     if (!token) {
       throw new Error("Sign in with GitHub to delete comments.");
@@ -707,6 +1054,96 @@ export default function PRDetailView() {
 
     // Remove from comments list
     setComments((prev) => prev.filter((c) => c.id !== commentId));
+  };
+
+  const handleToggleConversationCommentReaction = async (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => {
+    if (!token) {
+      throw new Error("Sign in with GitHub to add reactions.");
+    }
+
+    const { repoOwner, repoName, pullNumber } = resolveRepoContext();
+    const api = new GitHubAPI(token);
+    const targetComment = comments.find((comment) => comment.id === commentId);
+
+    if (!targetComment?.node_id) {
+      throw new Error("Unable to update reaction for this comment.");
+    }
+
+    const currentHasThumbsUp = targetComment.hasThumbsUp ?? false;
+    const currentHasThumbsDown = targetComment.hasThumbsDown ?? false;
+    const nextHasThumbsUp =
+      reaction === "thumbs_up" ? !currentHasThumbsUp : false;
+    const nextHasThumbsDown =
+      reaction === "thumbs_down" ? !currentHasThumbsDown : false;
+
+    // Step 1: optimistic update + loading state on comment object
+    setComments((prev) =>
+      prev.map((comment) =>
+        comment.id === commentId
+          ? {
+            ...comment,
+            hasThumbsUp: nextHasThumbsUp,
+            hasThumbsDown: nextHasThumbsDown,
+            isPerformingOperation: true,
+          }
+          : comment,
+      ),
+    );
+    writeReactionCacheEntry(repoOwner, repoName, pullNumber, {
+      id: commentId,
+      node_id: targetComment.node_id,
+      hasThumbsUp: nextHasThumbsUp,
+      hasThumbsDown: nextHasThumbsDown,
+    });
+
+    try {
+      // Step 2: call GitHub
+      if (reaction === "thumbs_up") {
+        if (currentHasThumbsUp) {
+          await api.removeReactionFromSubject(targetComment.node_id, "THUMBS_UP");
+        } else {
+          if (currentHasThumbsDown) {
+            await api.removeReactionFromSubject(
+              targetComment.node_id,
+              "THUMBS_DOWN",
+            );
+          }
+          await api.addReactionToSubject(targetComment.node_id, "THUMBS_UP");
+        }
+      } else if (currentHasThumbsDown) {
+        await api.removeReactionFromSubject(targetComment.node_id, "THUMBS_DOWN");
+      } else {
+        if (currentHasThumbsUp) {
+          await api.removeReactionFromSubject(targetComment.node_id, "THUMBS_UP");
+        }
+        await api.addReactionToSubject(targetComment.node_id, "THUMBS_DOWN");
+      }
+
+      // Step 3: clear loading; optimistic state is already applied
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId
+            ? {
+              ...comment,
+              isPerformingOperation: false,
+            }
+            : comment,
+        ),
+      );
+    } catch (error) {
+      // Step 4: on error, revert loading only
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId
+            ? { ...comment, isPerformingOperation: false }
+            : comment,
+        ),
+      );
+      throw error;
+    }
   };
 
   const handleUpdateDescription = async (body: string) => {
@@ -1204,6 +1641,7 @@ export default function PRDetailView() {
               }
             }}
             onDeleteComment={handleDeleteConversationComment}
+            onToggleReaction={handleToggleConversationCommentReaction}
             onUpdateDescription={handleUpdateDescription}
           />
         )}
@@ -1327,6 +1765,7 @@ export default function PRDetailView() {
             onReply={handleThreadReply}
             onResolve={handleThreadResolve}
             onDeleteComment={handleDeleteReviewComment}
+            onToggleReaction={handleToggleReviewCommentReaction}
           />
         )}
         {activeTab === "commits" && (

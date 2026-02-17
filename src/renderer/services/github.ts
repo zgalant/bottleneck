@@ -165,6 +165,7 @@ export interface Issue {
 
 export interface Comment {
   id: number;
+  node_id?: string;
   body: string;
   user: {
     login: string;
@@ -187,6 +188,9 @@ export interface Comment {
   original_commit_id?: string;
   pull_request_review_id?: number;
   in_reply_to_id?: number;
+  hasThumbsUp?: boolean;
+  hasThumbsDown?: boolean;
+  isPerformingOperation?: boolean;
 }
 
 export interface ReviewThread {
@@ -1183,7 +1187,7 @@ export class GitHubAPI {
     owner: string,
     repo: string,
     pullNumber: number,
-  ) {
+  ): Promise<Comment[]> {
     // Only get issue comments for the conversation tab
     const { data } = await this.octokit.issues.listComments({
       owner,
@@ -1192,7 +1196,104 @@ export class GitHubAPI {
       per_page: 500,
     });
 
-    return data as Comment[];
+    let reactionMap = new Map<
+      number,
+      { hasThumbsUp: boolean; hasThumbsDown: boolean; nodeId?: string }
+    >();
+
+    try {
+      reactionMap = await this.getPullRequestConversationReactionMap(
+        owner,
+        repo,
+        pullNumber,
+      );
+    } catch (error) {
+      console.warn(
+        "Failed to load conversation comment reaction states",
+        error,
+      );
+    }
+
+    return data.map((comment: any) => ({
+      ...comment,
+      node_id: comment.node_id ?? reactionMap.get(comment.id)?.nodeId,
+      hasThumbsUp: reactionMap.get(comment.id)?.hasThumbsUp ?? false,
+      hasThumbsDown: reactionMap.get(comment.id)?.hasThumbsDown ?? false,
+    })) as Comment[];
+  }
+
+  private async getPullRequestConversationReactionMap(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+  ): Promise<
+    Map<number, { hasThumbsUp: boolean; hasThumbsDown: boolean; nodeId?: string }>
+  > {
+    const reactionMap = new Map<
+      number,
+      { hasThumbsUp: boolean; hasThumbsDown: boolean; nodeId?: string }
+    >();
+    let hasNextPage = true;
+    let after: string | null = null;
+
+    const query = `
+      query ($owner: String!, $name: String!, $number: Int!, $after: String) {
+        repository(owner: $owner, name: $name) {
+          pullRequest(number: $number) {
+            comments(first: 100, after: $after) {
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                id
+                databaseId
+                reactionGroups {
+                  content
+                  viewerHasReacted
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    while (hasNextPage) {
+      const response: any = await this.octokit.graphql(query, {
+        owner,
+        name: repo,
+        number: pullNumber,
+        after,
+      });
+
+      const commentNodes = response?.repository?.pullRequest?.comments?.nodes ?? [];
+      commentNodes.forEach((node: any) => {
+        if (!node?.databaseId) return;
+
+        const reactionGroups = node.reactionGroups ?? [];
+        const hasThumbsUp = reactionGroups.some(
+          (group: any) =>
+            group?.content === "THUMBS_UP" && group?.viewerHasReacted,
+        );
+        const hasThumbsDown = reactionGroups.some(
+          (group: any) =>
+            group?.content === "THUMBS_DOWN" && group?.viewerHasReacted,
+        );
+
+        reactionMap.set(node.databaseId, {
+          hasThumbsUp,
+          hasThumbsDown,
+          nodeId: node.id,
+        });
+      });
+
+      const pageInfo = response?.repository?.pullRequest?.comments?.pageInfo;
+      hasNextPage = Boolean(pageInfo?.hasNextPage);
+      after = pageInfo?.endCursor ?? null;
+    }
+
+    return reactionMap;
   }
 
   async getPullRequestReviewComments(
@@ -1238,6 +1339,7 @@ export class GitHubAPI {
                 originalStartLine
                 comments(first: 100) {
                   nodes {
+                    id
                     databaseId
                     body
                     createdAt
@@ -1252,6 +1354,10 @@ export class GitHubAPI {
                     author {
                       login
                       avatarUrl
+                    }
+                    reactionGroups {
+                      content
+                      viewerHasReacted
                     }
                   }
                 }
@@ -1283,6 +1389,7 @@ export class GitHubAPI {
 
             return {
               id: node.databaseId,
+              node_id: node.id,
               body: node.body || "",
               user: {
                 login: node.author?.login || "ghost",
@@ -1305,6 +1412,14 @@ export class GitHubAPI {
               original_commit_id: undefined,
               pull_request_review_id: undefined,
               in_reply_to_id: undefined,
+              hasThumbsUp: (node.reactionGroups ?? []).some(
+                (group: any) =>
+                  group?.content === "THUMBS_UP" && group?.viewerHasReacted,
+              ),
+              hasThumbsDown: (node.reactionGroups ?? []).some(
+                (group: any) =>
+                  group?.content === "THUMBS_DOWN" && group?.viewerHasReacted,
+              ),
             };
           });
 
@@ -1776,6 +1891,46 @@ export class GitHubAPI {
       owner,
       repo,
       comment_id: commentId,
+    });
+  }
+
+  async addReactionToSubject(
+    subjectId: string,
+    content: "THUMBS_UP" | "THUMBS_DOWN",
+  ): Promise<void> {
+    const mutation = `
+      mutation ($subjectId: ID!, $content: ReactionContent!) {
+        addReaction(input: { subjectId: $subjectId, content: $content }) {
+          subject {
+            id
+          }
+        }
+      }
+    `;
+
+    await this.octokit.graphql(mutation, {
+      subjectId,
+      content,
+    });
+  }
+
+  async removeReactionFromSubject(
+    subjectId: string,
+    content: "THUMBS_UP" | "THUMBS_DOWN",
+  ): Promise<void> {
+    const mutation = `
+      mutation ($subjectId: ID!, $content: ReactionContent!) {
+        removeReaction(input: { subjectId: $subjectId, content: $content }) {
+          subject {
+            id
+          }
+        }
+      }
+    `;
+
+    await this.octokit.graphql(mutation, {
+      subjectId,
+      content,
     });
   }
 

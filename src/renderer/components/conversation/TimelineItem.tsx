@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Check, X, MessageSquare, Clock, MoreVertical, Trash2 } from "lucide-react";
+import {
+  Check,
+  X,
+  MessageSquare,
+  Clock,
+  MoreVertical,
+  Trash2,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "../../utils/cn";
 import { Markdown } from "../Markdown";
@@ -10,9 +19,19 @@ interface TimelineItemProps {
   theme: "light" | "dark";
   currentUser?: { login: string } | null;
   onDeleteComment?: (commentId: number) => void;
+  onToggleReaction?: (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => void;
 }
 
-export function TimelineItem({ item, theme, currentUser, onDeleteComment }: TimelineItemProps) {
+export function TimelineItem({
+  item,
+  theme,
+  currentUser,
+  onDeleteComment,
+  onToggleReaction,
+}: TimelineItemProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +84,10 @@ export function TimelineItem({ item, theme, currentUser, onDeleteComment }: Time
 
   const isAuthor = currentUser?.login === item.user.login;
   const canDelete = item.type === "comment" && isAuthor && onDeleteComment;
+  const canToggleReaction = item.type === "comment" && onToggleReaction;
+  const hasThumbsUp = item.hasThumbsUp ?? false;
+  const hasThumbsDown = item.hasThumbsDown ?? false;
+  const isUpdatingReaction = item.isPerformingOperation ?? false;
 
   return (
     <div className="card p-4">
@@ -99,42 +122,107 @@ export function TimelineItem({ item, theme, currentUser, onDeleteComment }: Time
                 })}
               </span>
             </div>
-            {canDelete && (
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className={cn(
-                    "p-1 rounded transition-colors",
-                    theme === "dark"
-                      ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
-                      : "hover:bg-gray-100 text-gray-600 hover:text-gray-800",
-                  )}
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                {showMenu && (
-                  <div
-                    className={cn(
-                      "absolute right-0 mt-1 py-1 rounded shadow-lg z-10 min-w-[120px]",
-                      theme === "dark"
-                        ? "bg-gray-700 border border-gray-600"
-                        : "bg-white border border-gray-200",
-                    )}
-                  >
+            {(canToggleReaction || canDelete) && (
+              <div className="flex items-center gap-1">
+                {canToggleReaction && (
+                  <>
                     <button
-                      onClick={() => {
-                        setShowMenu(false);
-                        onDeleteComment(item.id);
-                      }}
+                      onClick={() => onToggleReaction?.(item.id, "thumbs_up")}
+                      disabled={isUpdatingReaction}
+                      title={
+                        isUpdatingReaction
+                          ? "Updating reaction..."
+                          : hasThumbsUp
+                            ? "Thumbs-up added"
+                            : "Add thumbs-up reaction"
+                      }
+                      aria-label="Toggle thumbs-up reaction"
                       className={cn(
-                        "flex items-center space-x-2 px-3 py-1.5 w-full text-left text-sm transition-colors",
-                        "text-red-500 hover:bg-red-500 hover:text-white",
+                        "p-1.5 rounded border transition-colors",
+                        theme === "dark"
+                          ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-100",
+                        hasThumbsUp &&
+                          (theme === "dark"
+                            ? "border-blue-500/70 text-blue-300"
+                            : "border-blue-300 text-blue-600"),
+                        isUpdatingReaction &&
+                          (theme === "dark"
+                            ? "opacity-50 cursor-not-allowed"
+                            : "opacity-60 cursor-not-allowed"),
                       )}
                     >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Delete</span>
+                      <ThumbsUp className="w-3 h-3" />
                     </button>
+                    <button
+                      onClick={() => onToggleReaction?.(item.id, "thumbs_down")}
+                      disabled={isUpdatingReaction}
+                      title={
+                        isUpdatingReaction
+                          ? "Updating reaction..."
+                          : hasThumbsDown
+                            ? "Thumbs-down added"
+                            : "Add thumbs-down reaction"
+                      }
+                      aria-label="Toggle thumbs-down reaction"
+                      className={cn(
+                        "p-1.5 rounded border transition-colors",
+                        theme === "dark"
+                          ? "border-gray-600 text-gray-300 hover:bg-gray-700"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-100",
+                        hasThumbsDown &&
+                          (theme === "dark"
+                            ? "border-red-500/70 text-red-300"
+                            : "border-red-300 text-red-600"),
+                        isUpdatingReaction &&
+                          (theme === "dark"
+                            ? "opacity-50 cursor-not-allowed"
+                            : "opacity-60 cursor-not-allowed"),
+                      )}
+                    >
+                      <ThumbsDown className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+
+                {canDelete && (
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      onClick={() => setShowMenu(!showMenu)}
+                      className={cn(
+                        "p-1 rounded transition-colors",
+                        theme === "dark"
+                          ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
+                          : "hover:bg-gray-100 text-gray-600 hover:text-gray-800",
+                      )}
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+
+                    {showMenu && (
+                      <div
+                        className={cn(
+                          "absolute right-0 mt-1 py-1 rounded shadow-lg z-10 min-w-[120px]",
+                          theme === "dark"
+                            ? "bg-gray-700 border border-gray-600"
+                            : "bg-white border border-gray-200",
+                        )}
+                      >
+                        <button
+                          onClick={() => {
+                            setShowMenu(false);
+                            onDeleteComment(item.id);
+                          }}
+                          className={cn(
+                            "flex items-center space-x-2 px-3 py-1.5 w-full text-left text-sm transition-colors",
+                            "text-red-500 hover:bg-red-500 hover:text-white",
+                          )}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -19,6 +19,10 @@ interface ConversationTabProps {
   reviews: Review[];
   onCommentSubmit: (result: CommentSubmitResult) => void;
   onDeleteComment: (commentId: number) => Promise<void>;
+  onToggleReaction: (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => Promise<void>;
   onUpdateDescription: (body: string) => Promise<void>;
 }
 
@@ -32,6 +36,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
   reviews,
   onCommentSubmit,
   onDeleteComment,
+  onToggleReaction,
   onUpdateDescription,
 }, ref) {
   const { user, token } = useAuthStore();
@@ -171,6 +176,18 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
     }
   };
 
+  const handleToggleReaction = async (
+    commentId: number,
+    reaction: "thumbs_up" | "thumbs_down",
+  ) => {
+    try {
+      await onToggleReaction(commentId, reaction);
+    } catch (error) {
+      console.error("Failed to toggle reaction:", error);
+      alert("Failed to toggle reaction. Please try again.");
+    }
+  };
+
   // Combine comments and reviews into a timeline
   // Filter out reviews that are PENDING or have no submitted_at timestamp
   const timeline = [
@@ -229,6 +246,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
                 theme={theme}
                 currentUser={user}
                 onDeleteComment={handleDeleteClick}
+                onToggleReaction={handleToggleReaction}
               />
             ))}
           </div>
