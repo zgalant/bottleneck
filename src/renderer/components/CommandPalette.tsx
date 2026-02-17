@@ -11,6 +11,8 @@ import { useSyncStore } from "../stores/syncStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePRStore } from "../stores/prStore";
 import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
+import { GitHubAPI } from "../services/github";
+import { useAuthStore } from "../stores/authStore";
 
 import { extractAllURLsFromPR } from "../utils/urlParser";
 
@@ -258,7 +260,7 @@ const commands: Command[] = [
 
 export default function CommandPalette() {
    const { commandPaletteOpen, toggleCommandPalette, currentPage } = useUIStore();
-   const { repositories, setSelectedRepo } = usePRStore();
+   const { repositories, setSelectedRepo, pullRequests, revision } = usePRStore();
    const { favorites, loadFavorites } = useRepoFavoritesStore();
    const navigate = useNavigate();
    const location = useLocation();
@@ -458,7 +460,60 @@ export default function CommandPalette() {
         },
         preview: <div>Open URLs palette for this PR</div>,
       });
-    }
+
+      // Get the current PR to check for preview label
+      const { pullRequests } = usePRStore.getState();
+      const prKey = `${owner}/${repo}#${prNumber}`;
+      const currentPR = pullRequests.get(prKey);
+      const hasPreviewLabel = currentPR?.labels?.some((l: any) => l.name === "preview") ?? false;
+
+      cmds.push({
+        id: "toggle-preview-environment",
+        name: hasPreviewLabel ? "Remove Preview Environment" : "Create Preview Environment",
+        keywords: "preview environment label toggle",
+        icon: Zap,
+        action: async () => {
+          try {
+            let token: string | null = null;
+            if (window.electron) {
+              token = await window.electron.auth.getToken();
+            } else {
+              token = useAuthStore.getState().token;
+            }
+
+            if (!token) throw new Error("Not authenticated");
+
+            const api = new GitHubAPI(token);
+
+            if (hasPreviewLabel) {
+              // Remove preview label
+              await api.removeLabel(owner, repo, parseInt(prNumber), "preview");
+              console.log("✅ Preview label removed");
+            } else {
+              // Add preview label
+              await api.addLabels(owner, repo, parseInt(prNumber), ["preview"]);
+              console.log("✅ Preview label added");
+            }
+
+            // Update the PR in store with new labels
+            if (currentPR) {
+              const updatedLabels = hasPreviewLabel
+                ? currentPR.labels.filter((l: any) => l.name !== "preview")
+                : [...(currentPR.labels || []), { name: "preview", color: "0366d6" }];
+
+              usePRStore.getState().updatePR({
+                ...currentPR,
+                labels: updatedLabels,
+              });
+            }
+          } catch (error) {
+            console.error("❌ Failed to toggle preview label:", error);
+            throw error;
+          }
+        },
+        preview: <div>{hasPreviewLabel ? "Remove" : "Create"} preview environment for this PR</div>,
+      });
+      }
 
     // Add starred repository commands
     if (repositories && favorites.length > 0) {
@@ -497,7 +552,7 @@ export default function CommandPalette() {
     }
 
     return cmds;
-  }, [location.pathname, repositories, favorites, navigate, currentPage]);
+  }, [location.pathname, repositories, favorites, navigate, currentPage, pullRequests, revision]);
 
 
 
