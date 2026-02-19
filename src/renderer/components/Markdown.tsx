@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { visit } from "unist-util-visit";
@@ -6,6 +6,50 @@ import { Components } from "react-markdown";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { CodeBlock } from "./CodeBlock";
+
+function isPrivateGitHubImage(url: string | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.includes("github.com/user-attachments/") ||
+    url.includes("private-user-images.githubusercontent.com")
+  );
+}
+
+// Component that fetches private GitHub images via the main process
+function GitHubImage({ src, className, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (src && window.electron?.utils?.fetchGitHubImage) {
+      window.electron.utils.fetchGitHubImage(src).then((dataUrl: string | null) => {
+        if (cancelled) return;
+        if (dataUrl) {
+          setResolvedSrc(dataUrl);
+        } else {
+          setFailed(true);
+        }
+      });
+    } else {
+      setFailed(true);
+    }
+    return () => { cancelled = true; };
+  }, [src]);
+
+  if (failed) {
+    // Don't render fallback <img> with the original src — it will 404 for private images
+    return (
+      <span className={cn("inline-block rounded border text-xs px-2 py-1", className, "opacity-50")}>
+        🖼️ Image unavailable
+      </span>
+    );
+  }
+  if (!resolvedSrc) {
+    return <span className="inline-block bg-gray-200 dark:bg-gray-700 rounded animate-pulse" style={{ width: 200, height: 100 }} />;
+  }
+  return <img {...props} src={resolvedSrc} className={className} loading="lazy" />;
+}
 
 interface MarkdownProps {
   content: string;
@@ -73,29 +117,27 @@ const MarkdownRenderer = memo(
     const components: Components = {
       // Custom image rendering with proper sizing and dark mode support
        img({ node, ...props }: any) {
-         const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-           // Fallback: if image fails to load, try with different approach
-           const img = e.currentTarget;
-           // Log error for debugging
-           console.warn(`Failed to load image: ${img.src}`);
-           // Set a placeholder or minimal styling to indicate failure
-           img.style.opacity = "0.5";
-         };
+          const imgClassName = cn(
+            "max-w-full h-auto rounded",
+            theme === "dark" ? "opacity-90" : "",
+          );
 
-         return (
-           <img
-             {...props}
-             onError={handleError}
-             className={cn(
-               "max-w-full h-auto rounded",
-               theme === "dark" ? "opacity-90" : "",
-             )}
-             loading="lazy"
-             // Ensure GitHub image URLs work properly
-             crossOrigin="anonymous"
-           />
-         );
-       },
+          // Private GitHub images need to be fetched with auth via main process
+          if (isPrivateGitHubImage(props.src)) {
+            return <GitHubImage {...props} className={imgClassName} />;
+          }
+
+          return (
+            <img
+              {...props}
+              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                e.currentTarget.style.opacity = "0.5";
+              }}
+              className={imgClassName}
+              loading="lazy"
+            />
+          );
+        },
       // Custom link rendering
       a({ node, children, ...props }: any) {
         return (

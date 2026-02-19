@@ -70,6 +70,7 @@ const electronAPI = {
   // Utility functions
   utils: {
     fromBase64: (data: string) => ipcRenderer.invoke("utils:fromBase64", data),
+    fetchGitHubImage: (url: string) => ipcRenderer.invoke("utils:fetch-github-image", url),
   },
 
   // Settings operations
