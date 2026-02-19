@@ -1,8 +1,9 @@
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { visit } from "unist-util-visit";
 import { Components } from "react-markdown";
+import { X } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { CodeBlock } from "./CodeBlock";
@@ -49,6 +50,37 @@ function GitHubImage({ src, className, ...props }: React.ImgHTMLAttributes<HTMLI
     return <span className="inline-block bg-gray-200 dark:bg-gray-700 rounded animate-pulse" style={{ width: 200, height: 100 }} />;
   }
   return <img {...props} src={resolvedSrc} className={className} loading="lazy" />;
+}
+
+// Lightbox modal for viewing images at full size
+function ImageLightbox({ src, alt, onClose }: { src: string; alt?: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-[90vw] max-h-[90vh] object-contain rounded shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
 }
 
 interface MarkdownProps {
@@ -113,18 +145,36 @@ function rehypeUrlTransform() {
 // Internal component that does the actual rendering
 const MarkdownRenderer = memo(
   ({ content, theme, variant = "full" }: { content: string; theme: "light" | "dark"; variant?: "full" | "compact" }) => {
+    const [lightboxSrc, setLightboxSrc] = useState<{ src: string; alt?: string } | null>(null);
+    const closeLightbox = useCallback(() => setLightboxSrc(null), []);
+
     // Custom components for ReactMarkdown
     const components: Components = {
       // Custom image rendering with proper sizing and dark mode support
        img({ node, ...props }: any) {
           const imgClassName = cn(
-            "max-w-full h-auto rounded",
+            "h-auto rounded cursor-pointer hover:opacity-80 transition-opacity",
             theme === "dark" ? "opacity-90" : "",
           );
 
+          const handleClick = (src: string) => {
+            setLightboxSrc({ src, alt: props.alt });
+          };
+
           // Private GitHub images need to be fetched with auth via main process
           if (isPrivateGitHubImage(props.src)) {
-            return <GitHubImage {...props} className={imgClassName} />;
+            return (
+              <span className="inline-block" style={{ maxWidth: "60%" }}>
+                <GitHubImage
+                  {...props}
+                  className={imgClassName}
+                  onClick={(e: React.MouseEvent) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (img.src) handleClick(img.src);
+                  }}
+                />
+              </span>
+            );
           }
 
           return (
@@ -133,7 +183,9 @@ const MarkdownRenderer = memo(
               onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                 e.currentTarget.style.opacity = "0.5";
               }}
+              onClick={() => props.src && handleClick(props.src)}
               className={imgClassName}
+              style={{ maxWidth: "60%" }}
               loading="lazy"
             />
           );
@@ -197,6 +249,10 @@ const MarkdownRenderer = memo(
     };
 
     return (
+      <>
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc.src} alt={lightboxSrc.alt} onClose={closeLightbox} />
+      )}
       <div
         className={cn(
           variant === "full" ? [
@@ -249,6 +305,7 @@ const MarkdownRenderer = memo(
           {content}
         </ReactMarkdown>
       </div>
+      </>
     );
   },
 );

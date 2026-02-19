@@ -57,6 +57,7 @@ declare global {
 
       utils: {
         fromBase64: (data: string) => Promise<string>;
+        fetchGitHubImage: (url: string) => Promise<string | null>;
       };
 
       settings: {
