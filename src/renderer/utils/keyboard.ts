@@ -1,19 +1,11 @@
 import { useUIStore } from "../stores/uiStore";
 
 function navigateBack() {
-  const pathname = window.location.hash.replace(/^#/, '') || '/';
-  const isPRDetail = /^\/pulls\/[^/]+\/[^/]+\/\d+$/.test(pathname);
-  const isIssueDetail = /^\/issues\/[^/]+\/[^/]+\/\d+$/.test(pathname);
+  window.history.back();
+}
 
-  if (!isPRDetail && !isIssueDetail) return;
-
-
-  const nav = (window as any).__commandNavigate;
-  if (!nav) return;
-
-  const historyState = window.history.state?.usr;
-  const backPath = historyState?.from || (isPRDetail ? "/pulls" : "/issues");
-  nav(backPath);
+function navigateForward() {
+  window.history.forward();
 }
 
 export function setupKeyboardShortcuts() {
@@ -153,6 +145,13 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
+      // Navigate forward (Cmd/Ctrl + Shift + Right Arrow)
+      if (e.key === "ArrowRight" && e.shiftKey) {
+        e.preventDefault();
+        navigateForward();
+        return;
+      }
+
       // Go to settings (Cmd/Ctrl + ,)
       if (e.key === ",") {
         e.preventDefault();
@@ -163,7 +162,19 @@ export function setupKeyboardShortcuts() {
     }
   };
 
+  // Handle mouse back/forward buttons (buttons 3 and 4)
+  const handleMouseBack = (e: MouseEvent) => {
+    if (e.button === 3) {
+      e.preventDefault();
+      navigateBack();
+    } else if (e.button === 4) {
+      e.preventDefault();
+      navigateForward();
+    }
+  };
+
   document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("mouseup", handleMouseBack);
 
   // Listen to IPC events from the main process menu
   const handleToggleSidebar = () => {
@@ -197,6 +208,10 @@ export function setupKeyboardShortcuts() {
     navigateBack();
   };
 
+  const handleSwipeForward = () => {
+    navigateForward();
+  };
+
   window.electron.on("toggle-sidebar", handleToggleSidebar);
   window.electron.on("toggle-right-panel", handleToggleRightPanel);
   window.electron.on("open-command-palette", handleOpenCommandPalette);
@@ -204,9 +219,11 @@ export function setupKeyboardShortcuts() {
   window.electron.on("show-shortcuts", handleShowShortcuts);
   window.electron.on("add-label", handleAddLabel);
   window.electron.on("navigate-back", handleSwipeBack);
+  window.electron.on("navigate-forward", handleSwipeForward);
 
   return () => {
     document.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("mouseup", handleMouseBack);
     window.electron.off("toggle-sidebar", handleToggleSidebar);
     window.electron.off("toggle-right-panel", handleToggleRightPanel);
     window.electron.off("open-command-palette", handleOpenCommandPalette);
@@ -214,5 +231,6 @@ export function setupKeyboardShortcuts() {
     window.electron.off("show-shortcuts", handleShowShortcuts);
     window.electron.off("add-label", handleAddLabel);
     window.electron.off("navigate-back", handleSwipeBack);
+    window.electron.off("navigate-forward", handleSwipeForward);
   };
 }

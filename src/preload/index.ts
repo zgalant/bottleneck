@@ -118,6 +118,7 @@ const electronAPI = {
       "add-label",
       "open-pr-palette",
       "navigate-back",
+      "navigate-forward",
     ];
 
     if (validChannels.includes(channel)) {
