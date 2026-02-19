@@ -102,14 +102,11 @@ function createWindow() {
   // Intercept image requests to ensure they have proper headers
    mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
      (details, callback) => {
-       // For GitHub image URLs, ensure we're sending proper headers
        if (
          details.url.includes("github.com") ||
-         details.url.includes("githubusercontent.com") ||
-         details.url.includes("user-images.githubusercontent.com")
+         details.url.includes("githubusercontent.com")
        ) {
          const headers = { ...details.requestHeaders };
-         // GitHub may require User-Agent header for some image requests
          if (!headers["User-Agent"]) {
            headers["User-Agent"] = "Bottleneck/1.0";
          }
@@ -210,6 +207,58 @@ app.whenReady().then(async () => {
       console.log("[Settings] Set default clone location to ~/repos");
     }
     perfLog("Settings checked", settingsStart);
+
+    // Register IPC handler for fetching private GitHub images with auth.
+    // Uses curl to completely bypass Electron's network stack (which cancels redirects).
+    // curl -L follows GitHub's redirect chain:
+    // github.com/user-attachments/... (needs auth) → 302 → signed URL → image data
+    ipcMain.handle("utils:fetch-github-image", async (_event, url: string) => {
+      const { execFile } = require("child_process");
+
+      try {
+        const token = await githubAuth.getToken();
+        if (!token) return null;
+
+        const dataBuffer = await new Promise<Buffer>((resolve, reject) => {
+          execFile(
+            "curl",
+            [
+              "-sL",                            // silent + follow redirects
+              "-H", `Authorization: token ${token}`,
+              "-H", "User-Agent: Bottleneck/1.0",
+              "--max-time", "30",
+              "--output", "-",                   // write to stdout
+              url,
+            ],
+            { encoding: "buffer", maxBuffer: 50 * 1024 * 1024 },
+            (error: any, stdout: Buffer, stderr: Buffer) => {
+              if (error) {
+                reject(new Error(`curl failed: ${stderr?.toString() || error.message}`));
+              } else if (!stdout || stdout.length === 0) {
+                reject(new Error("curl returned empty response"));
+              } else {
+                resolve(stdout);
+              }
+            },
+          );
+        });
+
+        // Detect content type from magic bytes
+        let contentType = "image/png";
+        if (dataBuffer[0] === 0xFF && dataBuffer[1] === 0xD8) {
+          contentType = "image/jpeg";
+        } else if (dataBuffer[0] === 0x47 && dataBuffer[1] === 0x49 && dataBuffer[2] === 0x46) {
+          contentType = "image/gif";
+        } else if (dataBuffer[0] === 0x52 && dataBuffer[1] === 0x49 && dataBuffer[2] === 0x46 && dataBuffer[3] === 0x46) {
+          contentType = "image/webp";
+        }
+
+        return `data:${contentType};base64,${dataBuffer.toString("base64")}`;
+      } catch (e) {
+        console.warn("[GitHubImage] Failed to fetch:", e);
+        return null;
+      }
+    });
 
     createWindow();
     perfLog("Main process initialization complete", readyTime);
