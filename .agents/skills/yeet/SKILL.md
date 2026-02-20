@@ -11,15 +11,17 @@ Rapidly create pull requests on GitHub using the `gh` CLI with automatic descrip
 
 ```bash
 # Create a PR from current branch to master (always targets UPSTREAM codehs/bottleneck)
-# Format: --head YOUR_FORK_USERNAME:branch-name
+# Automatically extracts your fork username from origin remote
+FORK_USER=$(git config --get remote.origin.url | sed -E 's/.*[:/]([^/]+)\/bottleneck.*/\1/')
+
 gh pr create --base master \
-  --head zgalant:$(git branch --show-current) \
+  --head ${FORK_USER}:$(git branch --show-current) \
   --repo codehs/bottleneck \
   --title "Your title" \
   --body "Your description"
 ```
 
-⚠️ **CRITICAL**: Always use `--head zgalant:branch-name` format (fork-username:branch-name), not just branch name
+⚠️ **CRITICAL**: Always use `--head FORK_USER:branch-name` format (automatically extracts from your origin remote)
 
 ## Full Workflow
 
@@ -42,10 +44,13 @@ git diff master..HEAD
 
 ### 3. Create PR with gh CLI (Against codehs/bottleneck UPSTREAM)
 ```bash
-# ⚠️ ALWAYS use format: --head USERNAME:branch-name
+# Extract fork username from origin remote
+FORK_USER=$(git config --get remote.origin.url | sed -E 's/.*[:/]([^/]+)\/bottleneck.*/\1/')
+
+# ⚠️ ALWAYS use format: --head FORK_USER:branch-name and --repo codehs/bottleneck
 gh pr create \
   --base master \
-  --head zgalant:$(git branch --show-current) \
+  --head ${FORK_USER}:$(git branch --show-current) \
   --repo codehs/bottleneck \
   --title "Your Feature Title" \
   --body "Description with context"
@@ -83,9 +88,12 @@ This repo uses the **optimistic updates pattern** for GitHub API operations. Whe
 ### Example PR for bottleneck (Upstream codehs/bottleneck)
 
 ```bash
+# Extract your fork username (works for anyone)
+FORK_USER=$(git config --get remote.origin.url | sed -E 's/.*[:/]([^/]+)\/bottleneck.*/\1/')
+
 gh pr create \
   --base master \
-  --head voting \
+  --head ${FORK_USER}:voting \
   --repo codehs/bottleneck \
   --title "Add thumbs up/down votes on comments" \
   --body "Add the ability to vote on comments with thumbs up/down reactions that propagate to GitHub.
@@ -104,7 +112,8 @@ Implemented with optimistic updates pattern for instant UI feedback.
 ## Key Points
 
 - **Always push first** if you have unpushed commits to your fork
-- **Use `--head USERNAME:branch-name` format** - Critical for cross-fork PRs (e.g., `--head zgalant:feature-branch`)
+- **Extract fork user dynamically** - Use `git config --get remote.origin.url` to extract your fork username (works for anyone)
+- **Use `--head FORK_USER:branch-name` format** - Critical for cross-fork PRs
 - **Use descriptive titles** - they become the merge commit message
 - **Reference threads** in PR body for development context
 - **Check commit count** - `git log master..HEAD --oneline` should show your work
