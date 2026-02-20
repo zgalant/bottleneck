@@ -176,7 +176,7 @@ const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
                       {/* Labels */}
                       {pr.labels && pr.labels.length > 0 && (
                         <div className="flex items-center gap-1.5">
-                          {pr.labels.slice(0, 2).map((label) => {
+                          {pr.labels.map((label) => {
                             const labelColors = getLabelColors(label.color, theme);
                             return (
                               <span
@@ -192,16 +192,6 @@ const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
                               </span>
                             );
                           })}
-                          {pr.labels.length > 2 && (
-                            <span
-                              className={cn(
-                                "text-xs",
-                                theme === "dark" ? "text-gray-500" : "text-gray-400"
-                              )}
-                            >
-                              +{pr.labels.length - 2}
-                            </span>
-                          )}
                         </div>
                       )}
                     </div>

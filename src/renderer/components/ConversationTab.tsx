@@ -227,7 +227,6 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
           <PRDescription
             pr={pr}
             theme={theme}
-            currentUser={user}
             onUpdateDescription={onUpdateDescription}
           />
 

@@ -10,11 +10,10 @@ import { useOrgStore } from "../../stores/orgStore";
 interface PRDescriptionProps {
   pr: PullRequest;
   theme: "light" | "dark";
-  currentUser?: { login: string } | null;
   onUpdateDescription?: (body: string) => Promise<void>;
 }
 
-export function PRDescription({ pr, theme, currentUser, onUpdateDescription }: PRDescriptionProps) {
+export function PRDescription({ pr, theme, onUpdateDescription }: PRDescriptionProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(pr.body || "");
@@ -29,8 +28,7 @@ export function PRDescription({ pr, theme, currentUser, onUpdateDescription }: P
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fetchOrgMembers = useOrgStore((state) => state.fetchOrgMembers);
 
-  const isAuthor = currentUser?.login === pr.user.login;
-  const canEdit = isAuthor && onUpdateDescription;
+  const canEdit = !!onUpdateDescription;
 
   // Close menu when clicking outside
   useEffect(() => {

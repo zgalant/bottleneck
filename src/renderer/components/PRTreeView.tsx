@@ -18,6 +18,7 @@ import {
   XCircle,
   Clock,
   FileText,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { getPRIcon, getPRColorClass } from "../utils/prStatus";
@@ -609,34 +610,40 @@ export function PRTreeView({
                           {/* Labels */}
                            {item.data.pr.labels && item.data.pr.labels.length > 0 && (
                              <div className="flex items-center gap-2">
-                               {item.data.pr.labels.slice(0, 3).map((label) => {
-                                 const labelColors = getLabelColors(label.color, theme);
-                                 return (
-                                   <span
-                                     key={label.name}
-                                     className="px-2 py-0.5 rounded text-xs font-medium opacity-80"
-                                     style={{
-                                       backgroundColor: labelColors.backgroundColor,
-                                       color: labelColors.color,
-                                     }}
-                                     title={label.name}
-                                   >
-                                     {label.name.length > 20 ? `${label.name.slice(0, 20)}…` : label.name}
-                                   </span>
-                                 );
-                               })}
-                               {item.data.pr.labels.length > 3 && (
-                                 <span
-                                   className={cn(
-                                     "text-xs",
-                                     theme === "dark" ? "text-gray-500" : "text-gray-400"
-                                   )}
-                                 >
-                                   +{item.data.pr.labels.length - 3}
-                                 </span>
-                               )}
+                               {item.data.pr.labels.map((label) => {
+                                  const labelColors = getLabelColors(label.color, theme);
+                                  return (
+                                    <span
+                                      key={label.name}
+                                      className="px-2 py-0.5 rounded text-xs font-medium opacity-80"
+                                      style={{
+                                        backgroundColor: labelColors.backgroundColor,
+                                        color: labelColors.color,
+                                      }}
+                                      title={label.name}
+                                    >
+                                      {label.name.length > 20 ? `${label.name.slice(0, 20)}…` : label.name}
+                                    </span>
+                                  );
+                                })}
                              </div>
                            )}
+
+                          {/* Merge conflicts */}
+                          {item.data.pr.mergeable === false && (
+                            <span
+                              className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium opacity-80",
+                                theme === "dark"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-red-100 text-red-700"
+                              )}
+                              title="This PR has merge conflicts"
+                            >
+                              <AlertCircle className="w-3 h-3" />
+                              Conflicts
+                            </span>
+                          )}
 
                           {/* Linear issues */}
                           {(() => {

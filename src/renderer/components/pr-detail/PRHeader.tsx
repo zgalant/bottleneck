@@ -347,7 +347,7 @@ export function PRHeader({
         {/* Labels */}
         {pr.labels && pr.labels.length > 0 && (
           <div className="flex items-center gap-2">
-            {pr.labels.slice(0, 3).map((label) => {
+            {pr.labels.map((label) => {
               const labelColors = getLabelColors(label.color, theme);
               return (
                 <span
@@ -363,16 +363,6 @@ export function PRHeader({
                 </span>
               );
             })}
-            {pr.labels.length > 3 && (
-              <span
-                className={cn(
-                  "text-xs",
-                  theme === "dark" ? "text-gray-500" : "text-gray-400"
-                )}
-              >
-                +{pr.labels.length - 3}
-              </span>
-            )}
           </div>
         )}
 
