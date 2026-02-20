@@ -10,12 +10,16 @@ Rapidly create pull requests on GitHub using the `gh` CLI with automatic descrip
 ## Quick Start
 
 ```bash
-# Create a PR from current branch to master (always targets codehs/bottleneck)
-gh pr create --base master --head $(git branch --show-current) \
+# Create a PR from current branch to master (always targets UPSTREAM codehs/bottleneck)
+# Format: --head YOUR_FORK_USERNAME:branch-name
+gh pr create --base master \
+  --head zgalant:$(git branch --show-current) \
   --repo codehs/bottleneck \
   --title "Your title" \
   --body "Your description"
 ```
+
+⚠️ **CRITICAL**: Always use `--head zgalant:branch-name` format (fork-username:branch-name), not just branch name
 
 ## Full Workflow
 
@@ -36,11 +40,12 @@ git diff master..HEAD --stat
 git diff master..HEAD
 ```
 
-### 3. Create PR with gh CLI (Against codehs/bottleneck)
+### 3. Create PR with gh CLI (Against codehs/bottleneck UPSTREAM)
 ```bash
+# ⚠️ ALWAYS use format: --head USERNAME:branch-name
 gh pr create \
   --base master \
-  --head $(git branch --show-current) \
+  --head zgalant:$(git branch --show-current) \
   --repo codehs/bottleneck \
   --title "Your Feature Title" \
   --body "Description with context"
@@ -98,12 +103,14 @@ Implemented with optimistic updates pattern for instant UI feedback.
 
 ## Key Points
 
-- **Always push first** if you have unpushed commits
+- **Always push first** if you have unpushed commits to your fork
+- **Use `--head USERNAME:branch-name` format** - Critical for cross-fork PRs (e.g., `--head zgalant:feature-branch`)
 - **Use descriptive titles** - they become the merge commit message
 - **Reference threads** in PR body for development context
 - **Check commit count** - `git log master..HEAD --oneline` should show your work
 - **Verify target branch** - default is `master`, not `main` in this repo
-- **Always specify `--repo codehs/bottleneck`** - PRs ALWAYS go to the upstream repo, not forks
+- **ALWAYS use `--repo codehs/bottleneck`** - PRs MUST target the upstream repo
+- **NEVER create PRs from fork to fork** - Always `--repo codehs/bottleneck`
 
 ## Debugging
 
