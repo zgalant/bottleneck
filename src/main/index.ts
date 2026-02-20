@@ -167,17 +167,10 @@ function createWindow() {
     mainWindow = null;
   });
 
-  // Handle macOS three-finger swipe gestures (debounced to prevent double-firing)
-  let lastSwipeTime = 0;
+  // Handle macOS three-finger swipe gestures
   mainWindow.on("swipe" as any, (_event: any, direction: string) => {
-    const now = Date.now();
-    if (now - lastSwipeTime < 500) return;
-    lastSwipeTime = now;
-
     if (direction === "left") {
       mainWindow?.webContents.send("navigate-back");
-    } else if (direction === "right") {
-      mainWindow?.webContents.send("navigate-forward");
     }
   });
 
