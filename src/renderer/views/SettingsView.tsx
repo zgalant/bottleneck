@@ -31,6 +31,7 @@ import {
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useUIStore } from "../stores/uiStore";
+import { usePRStore } from "../stores/prStore";
 import TeamManagementDialog from "../components/TeamManagementDialog";
 import { RepoFavoritesSection } from "../components/settings/RepoFavoritesSection";
 import PeopleTab from "../components/settings/PeopleTab";
@@ -266,6 +267,8 @@ export default function SettingsView() {
   // State for cache size
   const [cacheSize, setCacheSize] = useState<number>(0);
   const [loadingCacheSize, setLoadingCacheSize] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<number | null>(null);
+  const { purgeMergedPRs } = usePRStore();
 
   // Load cache size on component mount
   useEffect(() => {
@@ -1548,27 +1551,80 @@ export default function SettingsView() {
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={settings.enableTelemetry}
-                      onChange={(e) =>
-                        updateSettings({ enableTelemetry: e.target.checked })
-                      }
-                      className={cn(
-                        "rounded focus:ring-blue-500",
-                        theme === "dark"
-                          ? "border-gray-600 bg-gray-700 text-blue-500"
-                          : "border-gray-300 bg-white text-blue-600",
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "text-sm",
-                        theme === "dark" ? "text-white" : "text-gray-900",
-                      )}
-                    >
-                      Share anonymous usage data
-                    </span>
+                   <input
+                     type="checkbox"
+                     checked={settings.enableTelemetry}
+                     onChange={(e) =>
+                       updateSettings({ enableTelemetry: e.target.checked })
+                     }
+                     className={cn(
+                       "rounded focus:ring-blue-500",
+                       theme === "dark"
+                         ? "border-gray-600 bg-gray-700 text-blue-500"
+                         : "border-gray-300 bg-white text-blue-600",
+                     )}
+                   />
+                   <span
+                     className={cn(
+                       "text-sm",
+                       theme === "dark" ? "text-white" : "text-gray-900",
+                     )}
+                   >
+                     Share anonymous usage data
+                   </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                   <div className="flex items-center space-x-3">
+                     <input
+                       type="checkbox"
+                       checked={settings.autoPurgeOldPRs}
+                       onChange={(e) =>
+                         updateSettings({ autoPurgeOldPRs: e.target.checked })
+                       }
+                       className={cn(
+                         "rounded focus:ring-blue-500",
+                         theme === "dark"
+                           ? "border-gray-600 bg-gray-700 text-blue-500"
+                           : "border-gray-300 bg-white text-blue-600",
+                       )}
+                     />
+                     <span
+                       className={cn(
+                         "text-sm",
+                         theme === "dark" ? "text-white" : "text-gray-900",
+                       )}
+                     >
+                       Auto-clear cache for old merged PRs
+                     </span>
+                   </div>
+                   <div className="flex items-center space-x-3">
+                     {purgeResult !== null && (
+                       <span
+                         className={cn(
+                           "text-sm",
+                           theme === "dark" ? "text-gray-400" : "text-gray-600",
+                         )}
+                       >
+                         Purged {purgeResult} PR{purgeResult !== 1 ? "s" : ""}
+                       </span>
+                     )}
+                     <button
+                       onClick={() => {
+                         const count = purgeMergedPRs(4);
+                         setPurgeResult(count);
+                         setTimeout(() => setPurgeResult(null), 3000);
+                       }}
+                       className={cn(
+                         "px-3 py-1 text-sm rounded border",
+                         theme === "dark"
+                           ? "border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600"
+                           : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
+                       )}
+                     >
+                       Clear Now
+                     </button>
+                   </div>
                   </div>
 
                   <div
