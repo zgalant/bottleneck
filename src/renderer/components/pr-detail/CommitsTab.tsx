@@ -1,7 +1,40 @@
-import React from "react";
+import { ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Commit } from "../../services/github";
 import { formatDistanceToNow } from "date-fns";
+
+const urlRegex = /(https?:\/\/[^\s)>,]+)/g;
+
+function linkifyText(text: string, className: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  urlRegex.lastIndex = 0;
+  while ((match = urlRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const url = match[0];
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    lastIndex = match.index + url.length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
+}
 
 interface CommitsTabProps {
   commits: Commit[];
@@ -71,7 +104,13 @@ export function CommitsTab({ commits, theme }: CommitsTabProps) {
                     "text-sm mt-3 whitespace-pre-wrap break-words",
                     theme === "dark" ? "text-gray-400" : "text-gray-600",
                   )}>
-                    {commit.message.split("\n").slice(1).join("\n")}
+                    {linkifyText(
+                      commit.message.split("\n").slice(1).join("\n"),
+                      cn(
+                        "underline hover:opacity-80 transition-opacity",
+                        theme === "dark" ? "text-blue-400" : "text-blue-600",
+                      ),
+                    )}
                   </div>
                 )}
                 <div className={cn(
