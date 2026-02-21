@@ -139,6 +139,15 @@ function App() {
         } else {
           console.log(`[App] Skipping initial sync (last sync was ${Math.round((now.getTime() - lastSync.getTime()) / 1000)}s ago)`);
         }
+
+        // Auto-purge old merged PRs if enabled
+        const settingsState = useSettingsStore.getState();
+        if (settingsState.settings.autoPurgeOldPRs) {
+          const purged = usePRStore.getState().purgeMergedPRs(4);
+          if (purged > 0) {
+            console.log(`[App] Auto-purged ${purged} old merged PRs from cache`);
+          }
+        }
       });
     }
   }, [isAuthenticated, token]);

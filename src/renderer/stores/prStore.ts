@@ -67,6 +67,7 @@ interface PRState {
   updatePR: (pr: PullRequest) => void;
   bulkUpdatePRs: (prs: PullRequest[]) => void;
   fetchPRStats: (owner: string, repo: string, prNumbers: number[]) => Promise<void>;
+  purgeMergedPRs: (daysAgo?: number) => number;
 }
 
 // Load recently viewed repos from electron store on initialization
@@ -825,6 +826,47 @@ export const usePRStore = create<PRState>((set, get) => {
       } catch (error) {
         console.error("Failed to fetch PR stats:", error);
       }
+    },
+
+    purgeMergedPRs: (daysAgo = 4) => {
+      const cutoff = Date.now() - daysAgo * 24 * 60 * 60 * 1000;
+      let purgedCount = 0;
+
+      set((state) => {
+        const newPRs = new Map(state.pullRequests);
+        const newCache = new Map(state.repoPRCache);
+
+        // Purge from repoPRCache
+        for (const [repoKey, prMap] of newCache.entries()) {
+          const newPrMap = new Map(prMap);
+          for (const [key, pr] of prMap.entries()) {
+            if (pr.merged && pr.merged_at && new Date(pr.merged_at).getTime() < cutoff) {
+              newPrMap.delete(key);
+              newPRs.delete(key);
+              purgedCount++;
+            }
+          }
+          if (newPrMap.size > 0) {
+            newCache.set(repoKey, newPrMap);
+          } else {
+            newCache.delete(repoKey);
+          }
+        }
+
+        return {
+          pullRequests: newPRs,
+          repoPRCache: newCache,
+          revision: purgedCount > 0 ? state.revision + 1 : state.revision,
+        };
+      });
+
+      if (purgedCount > 0) {
+        savePRCache(get().repoPRCache);
+        get().groupPRsByPrefix();
+      }
+
+      console.log(`[PRStore] Purged ${purgedCount} merged PRs older than ${daysAgo} days`);
+      return purgedCount;
     },
   };
 });

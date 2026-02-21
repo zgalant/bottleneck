@@ -31,6 +31,7 @@ interface Settings {
   cacheSize: number;
   enableDebugMode: boolean;
   enableTelemetry: boolean;
+  autoPurgeOldPRs: boolean;
 }
 
 interface SettingsState {
@@ -92,6 +93,7 @@ const defaultSettings: Settings = {
   cacheSize: 500,
   enableDebugMode: false,
   enableTelemetry: false,
+  autoPurgeOldPRs: false,
 };
 
 export const useSettingsStore = create<SettingsState>()(
