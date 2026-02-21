@@ -280,8 +280,27 @@ export default function MigrationsView() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <GitPullRequest className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <GitPullRequest 
+                          className={cn(
+                            "w-4 h-4 flex-shrink-0",
+                            pr.draft 
+                              ? theme === "dark" ? "text-gray-500" : "text-gray-400"
+                              : "text-green-500"
+                          )} 
+                        />
                         <span className="font-medium truncate">{pr.title}</span>
+                        {pr.draft && (
+                          <span 
+                            className={cn(
+                              "px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                              theme === "dark"
+                                ? "bg-gray-800 text-gray-400 border-gray-700"
+                                : "bg-gray-100 text-gray-600 border-gray-300"
+                            )}
+                          >
+                            Draft
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-xs" style={{
                         color: theme === "dark" ? "#9ca3af" : "#6b7280",
