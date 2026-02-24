@@ -142,13 +142,31 @@ const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
                     </div>
                     <div
                       className={cn(
-                        "text-xs mt-1",
+                        "flex items-center gap-1.5 text-xs mt-1",
                         theme === "dark" ? "text-gray-400" : "text-gray-500",
                       )}
                     >
-                      {repoName} • #{pr.number} • by {pr.user.login}
+                      <span>{repoName} • #{pr.number} • by {pr.user.login}</span>
+                      {pr.requested_reviewers && pr.requested_reviewers.length > 0 && (
+                        <>
+                          <span>• Reviewers:</span>
+                          <div className="flex items-center gap-1.5">
+                            {pr.requested_reviewers.map((reviewer, i) => (
+                              <span key={reviewer.login} className="inline-flex items-center gap-0.5">
+                                <img
+                                  src={reviewer.avatar_url}
+                                  alt={reviewer.login}
+                                  className="w-4 h-4 rounded-full"
+                                />
+                                <span>{reviewer.login}</span>
+                                {i < pr.requested_reviewers.length - 1 && <span>,</span>}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    
+
                     {/* Labels and review status row */}
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       {/* Review status badge */}
