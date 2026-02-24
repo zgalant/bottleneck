@@ -420,6 +420,7 @@ export class GitHubAPI {
                   requestedReviewer {
                     ... on User {
                       login
+                      avatarUrl
                     }
                     ... on Team {
                       name
@@ -545,6 +546,7 @@ export class GitHubAPI {
             })) || [],
             requested_reviewers: pr.reviewRequests?.nodes?.map((r: any) => ({
               login: r.requestedReviewer?.login || r.requestedReviewer?.name || "unknown",
+              avatar_url: r.requestedReviewer?.avatarUrl || "",
             })) || [],
             labels: pr.labels?.nodes?.map((l: any) => ({
               name: l.name,
